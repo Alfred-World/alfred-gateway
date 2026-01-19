@@ -1,0 +1,79 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Build results
+**/bin/
+**/obj/
+**/out/
+
+# User-specific files
+*.suo
+*.user
+*.userosdf
+*.sln.docstates
+
+# Visual Studio
+.vs/
+.vscode/
+
+# Rider
+.idea/
+*.sln.iml
+
+# Test results
+**/TestResults/
+**/*.trx
+
+# NuGet
+**/packages/
+*.nupkg
+*.snupkg
+
+# Files built by Visual Studio
+*_i.c
+*_p.c
+*_h.h
+*.ilk
+*.meta
+*.obj
+*.iobj
+*.pch
+*.pdb
+*.ipdb
+*.pgc
+*.pgd
+*.rsp
+*.sbr
+*.tlb
+*.tli
+*.tlh
+*.tmp
+*.tmp_proj
+*_wpftmp.csproj
+*.log
+*.vspscc
+*.vssscc
+.builds
+*.pidb
+*.svclog
+*.scc
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Documentation
+**/docs/
+README.md
+
+# Docker
+docker-compose.yml
+docker-compose.*.yml
+.dockerignore

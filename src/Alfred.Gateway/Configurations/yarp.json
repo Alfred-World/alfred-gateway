@@ -1,0 +1,98 @@
+{
+  "ReverseProxy": {
+    "Routes": {
+      "identity-swagger-route": {
+        "ClusterId": "identity-cluster",
+        "AuthorizationPolicy": "AllowAnonymous",
+        "Match": {
+          "Path": "/api/identity/swagger/{**remainder}"
+        },
+        "Transforms": [
+          { "PathPattern": "/swagger/{**remainder}" }
+        ]
+      },
+      "core-swagger-route": {
+        "ClusterId": "core-cluster",
+        "AuthorizationPolicy": "AllowAnonymous",
+        "Match": {
+          "Path": "/api/core/swagger/{**remainder}"
+        },
+        "Transforms": [
+          { "PathPattern": "/swagger/{**remainder}" }
+        ]
+      },
+      "identity-route": {
+        "ClusterId": "identity-cluster",
+        "AuthorizationPolicy": "AllowAnonymous",
+        "Match": {
+          "Path": "/auth/{**remainder}"
+        },
+        "Transforms": [
+          { "PathPattern": "/api/{**remainder}" }
+        ]
+      },
+      "core-route": {
+        "ClusterId": "core-cluster",
+        "AuthorizationPolicy": "Authenticated",
+        "RateLimiterPolicy": "fixed-window",
+        "Match": {
+          "Path": "/api/{**remainder}"
+        }
+      },
+      "health-check-identity-route": {
+        "ClusterId": "identity-cluster",
+        "AuthorizationPolicy": "AllowAnonymous",
+        "Match": {
+          "Path": "/health/identity"
+        },
+        "Transforms": [
+          { "PathPattern": "/health" }
+        ]
+      },
+      "health-check-core-route": {
+        "ClusterId": "core-cluster",
+        "AuthorizationPolicy": "AllowAnonymous",
+        "Match": {
+          "Path": "/health/core"
+        },
+        "Transforms": [
+          { "PathPattern": "/health" }
+        ]
+      }
+    },
+    "Clusters": {
+      "identity-cluster": {
+        "Destinations": {
+          "destination1": {
+            "Address": "http://localhost:8100"
+          }
+        },
+        "HealthCheck": {
+          "Active": {
+            "Enabled": true,
+            "Interval": "00:00:30",
+            "Timeout": "00:00:10",
+            "Policy": "ConsecutiveFailures",
+            "Path": "/health"
+          }
+        }
+      },
+      "core-cluster": {
+        "Destinations": {
+          "destination1": {
+            "Address": "http://localhost:8200"
+          }
+        },
+        "HealthCheck": {
+          "Active": {
+            "Enabled": true,
+            "Interval": "00:00:30",
+            "Timeout": "00:00:10",
+            "Policy": "ConsecutiveFailures",
+            "Path": "/health"
+          }
+        }
+      }
+    }
+  }
+}

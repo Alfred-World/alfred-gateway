@@ -1,0 +1,33 @@
+.env
+*.env
+!.env.example
+.env.local
+.env.*.local
+certificates/
+
+# Build results
+bin/
+obj/
+out/
+
+# User-specific files
+*.suo
+*.user
+*.userosdf
+*.sln.docstates
+
+# Visual Studio
+.vs/
+.vscode/
+
+# Rider
+.idea/
+*.sln.iml
+
+# Test results
+TestResults/
+*.trx
+
+# OS files
+.DS_Store
+Thumbs.db

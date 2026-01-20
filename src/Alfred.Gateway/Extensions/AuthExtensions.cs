@@ -56,8 +56,15 @@ public static class AuthExtensions
                     
                     var result = System.Text.Json.JsonSerializer.Serialize(new
                     {
-                        error = "Unauthorized",
-                        message = "You are not authorized to access this resource. Please provide a valid token."
+                        success = false,
+                        errors = new[]
+                        {
+                            new
+                            {
+                                message = "You are not authorized to access this resource. Please provide a valid token.",
+                                code = "UNAUTHORIZED"
+                            }
+                        }
                     });
                     
                     return context.Response.WriteAsync(result);
@@ -69,8 +76,15 @@ public static class AuthExtensions
                     
                     var result = System.Text.Json.JsonSerializer.Serialize(new
                     {
-                        error = "Forbidden",
-                        message = "You don't have permission to access this resource."
+                        success = false,
+                        errors = new[]
+                        {
+                            new
+                            {
+                                message = "You don't have permission to access this resource.",
+                                code = "FORBIDDEN"
+                            }
+                        }
                     });
                     
                     return context.Response.WriteAsync(result);

@@ -21,15 +21,37 @@
           { "PathPattern": "/swagger/{**remainder}" }
         ]
       },
-      "identity-route": {
+      "identity-auth-route": {
         "ClusterId": "identity-cluster",
         "AuthorizationPolicy": "AllowAnonymous",
         "Match": {
-          "Path": "/auth/{**remainder}"
+          "Path": "/api/v1/identity/auth/{**remainder}"
         },
-        "Transforms": [
-          { "PathPattern": "/api/{**remainder}" }
-        ]
+        "Order": 1
+      },
+      "identity-connect-route": {
+        "ClusterId": "identity-cluster",
+        "AuthorizationPolicy": "AllowAnonymous",
+        "Match": {
+          "Path": "/connect/{**remainder}"
+        },
+        "Order": 1
+      },
+      "identity-wellknown-route": {
+        "ClusterId": "identity-cluster",
+        "AuthorizationPolicy": "AllowAnonymous",
+        "Match": {
+          "Path": "/.well-known/{**remainder}"
+        },
+        "Order": 1
+      },
+      "identity-applications-route": {
+        "ClusterId": "identity-cluster",
+        "AuthorizationPolicy": "Authenticated",
+        "Match": {
+          "Path": "/api/applications/{**remainder}"
+        },
+        "Order": 1
       },
       "core-route": {
         "ClusterId": "core-cluster",
@@ -37,7 +59,8 @@
         "RateLimiterPolicy": "fixed-window",
         "Match": {
           "Path": "/api/{**remainder}"
-        }
+        },
+        "Order": 100
       },
       "health-check-identity-route": {
         "ClusterId": "identity-cluster",

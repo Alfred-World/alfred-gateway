@@ -8,7 +8,9 @@
           "Path": "/api/identity/swagger/{**remainder}"
         },
         "Transforms": [
-          { "PathPattern": "/swagger/{**remainder}" }
+          {
+            "PathPattern": "/swagger/{**remainder}"
+          }
         ]
       },
       "core-swagger-route": {
@@ -18,7 +20,9 @@
           "Path": "/api/core/swagger/{**remainder}"
         },
         "Transforms": [
-          { "PathPattern": "/swagger/{**remainder}" }
+          {
+            "PathPattern": "/swagger/{**remainder}"
+          }
         ]
       },
       "identity-auth-route": {
@@ -28,9 +32,17 @@
           "Path": "/identity/auth/{**remainder}"
         },
         "Transforms": [
-          { "X-Forwarded": "Set" },
-          { "RequestHeader": "X-Forwarded-Proto", "Set": "https" },
-          { "RequestHeader": "X-Forwarded-Host", "Set": "gateway.test" }
+          {
+            "X-Forwarded": "Set"
+          },
+          {
+            "RequestHeader": "X-Forwarded-Proto",
+            "Set": "https"
+          },
+          {
+            "RequestHeader": "X-Forwarded-Host",
+            "Set": "gateway.test"
+          }
         ],
         "Order": 1
       },
@@ -41,9 +53,17 @@
           "Path": "/connect/{**remainder}"
         },
         "Transforms": [
-          { "X-Forwarded": "Set" },
-          { "RequestHeader": "X-Forwarded-Proto", "Set": "https" },
-          { "RequestHeader": "X-Forwarded-Host", "Set": "gateway.test" }
+          {
+            "X-Forwarded": "Set"
+          },
+          {
+            "RequestHeader": "X-Forwarded-Proto",
+            "Set": "https"
+          },
+          {
+            "RequestHeader": "X-Forwarded-Host",
+            "Set": "gateway.test"
+          }
         ],
         "Order": 1
       },
@@ -79,7 +99,9 @@
           "Path": "/health/identity"
         },
         "Transforms": [
-          { "PathPattern": "/health" }
+          {
+            "PathPattern": "/health"
+          }
         ]
       },
       "health-check-core-route": {
@@ -89,7 +111,9 @@
           "Path": "/health/core"
         },
         "Transforms": [
-          { "PathPattern": "/health" }
+          {
+            "PathPattern": "/health"
+          }
         ]
       }
     },

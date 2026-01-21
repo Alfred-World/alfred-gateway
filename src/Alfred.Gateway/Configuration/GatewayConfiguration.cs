@@ -90,19 +90,15 @@ public class GatewayConfiguration
     private static void ValidatePort(int port)
     {
         if (port <= 0 || port > 65535)
-        {
             throw new InvalidOperationException($"Port must be between 1 and 65535. Got: {port}");
-        }
     }
 
     private static string GetRequired(string key)
     {
         var value = System.Environment.GetEnvironmentVariable(key);
         if (string.IsNullOrWhiteSpace(value))
-        {
             throw new InvalidOperationException(
                 $"Required environment variable '{key}' is not set. Please check your .env file.");
-        }
 
         return value;
     }
@@ -115,16 +111,11 @@ public class GatewayConfiguration
     private static int GetInt(string key, int defaultValue)
     {
         var value = GetOptional(key);
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return defaultValue;
-        }
+        if (string.IsNullOrWhiteSpace(value)) return defaultValue;
 
         if (!int.TryParse(value, out var result))
-        {
             throw new InvalidOperationException(
                 $"Environment variable '{key}' must be a valid integer. Got: '{value}'");
-        }
 
         return result;
     }
@@ -132,16 +123,11 @@ public class GatewayConfiguration
     private static bool GetBool(string key, bool defaultValue)
     {
         var value = GetOptional(key);
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return defaultValue;
-        }
+        if (string.IsNullOrWhiteSpace(value)) return defaultValue;
 
         if (!bool.TryParse(value, out var result))
-        {
             throw new InvalidOperationException(
                 $"Environment variable '{key}' must be a valid boolean. Got: '{value}'");
-        }
 
         return result;
     }

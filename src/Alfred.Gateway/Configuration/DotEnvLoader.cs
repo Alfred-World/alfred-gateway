@@ -35,16 +35,10 @@ public static class DotEnvLoader
             var trimmedLine = line.Trim();
 
             // Skip empty lines and comments
-            if (string.IsNullOrWhiteSpace(trimmedLine) || trimmedLine.StartsWith("#"))
-            {
-                continue;
-            }
+            if (string.IsNullOrWhiteSpace(trimmedLine) || trimmedLine.StartsWith("#")) continue;
 
             var parts = trimmedLine.Split('=', 2, StringSplitOptions.None);
-            if (parts.Length != 2)
-            {
-                continue;
-            }
+            if (parts.Length != 2) continue;
 
             var key = parts[0].Trim();
             var value = parts[1].Trim();
@@ -52,15 +46,11 @@ public static class DotEnvLoader
             // Remove quotes if present
             if ((value.StartsWith("\"") && value.EndsWith("\"")) ||
                 (value.StartsWith("'") && value.EndsWith("'")))
-            {
                 value = value[1..^1];
-            }
 
             // Only set if not already set (system env vars take precedence)
             if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable(key)))
-            {
                 Environment.SetEnvironmentVariable(key, value);
-            }
         }
 
         Console.WriteLine("Environment variables loaded successfully");
@@ -76,10 +66,7 @@ public static class DotEnvLoader
         if (solutionRoot != null)
         {
             var envFile = Path.Combine(solutionRoot, $".env.{environment.ToLowerInvariant()}");
-            if (File.Exists(envFile))
-            {
-                Load(envFile);
-            }
+            if (File.Exists(envFile)) Load(envFile);
         }
     }
 
@@ -92,9 +79,7 @@ public static class DotEnvLoader
             // Look for .sln file or docker-compose.yml as indicators of solution root
             if (current.GetFiles("*.sln").Length > 0 ||
                 current.GetFiles("docker-compose.yml").Length > 0)
-            {
                 return current.FullName;
-            }
 
             current = current.Parent;
         }

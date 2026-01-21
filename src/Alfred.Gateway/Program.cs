@@ -15,10 +15,7 @@ var gatewayConfig = new GatewayConfiguration();
 var builder = WebApplication.CreateBuilder(args);
 
 // Configure Kestrel to listen on the specified hostname and port from environment
-builder.WebHost.ConfigureKestrel((context, options) => 
-{ 
-    options.ListenAnyIP(gatewayConfig.AppPort); 
-});
+builder.WebHost.ConfigureKestrel((context, options) => { options.ListenAnyIP(gatewayConfig.AppPort); });
 
 // Register GatewayConfiguration as singleton
 builder.Services.AddSingleton(gatewayConfig);
@@ -27,9 +24,9 @@ builder.Services.AddSingleton(gatewayConfig);
 // 2. CONFIGURATION - Load file cấu hình riêng cho YARP
 // ====================================================================================
 builder.Configuration.AddJsonFile(
-    "Configurations/yarp.json", 
-    optional: false, 
-    reloadOnChange: true);
+    "Configurations/yarp.json",
+    false,
+    true);
 
 // ====================================================================================
 // 3. SERVICES REGISTRATION - Đăng ký các service cần thiết
@@ -53,9 +50,9 @@ builder.Services.AddAlfredSwagger();
 // Configure Forwarded Headers for reverse proxy support
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
-    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | 
-                                ForwardedHeaders.XForwardedProto | 
-                                ForwardedHeaders.XForwardedHost;
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor |
+                               ForwardedHeaders.XForwardedProto |
+                               ForwardedHeaders.XForwardedHost;
     // Clear KnownNetworks and KnownProxies for development
     // In production, you should configure these properly
     options.KnownNetworks.Clear();
@@ -81,10 +78,7 @@ app.UseGlobalExceptionHandler();
 app.UseAlfredSwagger(builder.Configuration);
 
 // 3. HTTPS Redirection (trong production nên bật)
-if (!app.Environment.IsDevelopment())
-{
-    app.UseHttpsRedirection();
-}
+if (!app.Environment.IsDevelopment()) app.UseHttpsRedirection();
 
 // 4. CORS - Cho phép Cross-Origin requests
 app.UseAlfredCors();
@@ -124,7 +118,8 @@ app.MapReverseProxy();
 // ====================================================================================
 app.Logger.LogInformation("🚀 Alfred Gateway is starting...");
 app.Logger.LogInformation("📍 Environment: {Environment}", gatewayConfig.Environment);
-app.Logger.LogInformation("🌐 Listening on: http://{Hostname}:{Port}", gatewayConfig.AppHostname, gatewayConfig.AppPort);
+app.Logger.LogInformation("🌐 Listening on: http://{Hostname}:{Port}", gatewayConfig.AppHostname,
+    gatewayConfig.AppPort);
 app.Logger.LogInformation("🔒 Auth Authority: {Authority}", gatewayConfig.AuthAuthority);
 app.Logger.LogInformation("🎯 Identity Service: {Url}", gatewayConfig.IdentityServiceUrl);
 app.Logger.LogInformation("🎯 Core Service: {Url}", gatewayConfig.CoreServiceUrl);

@@ -1,6 +1,6 @@
+using System.Threading.RateLimiting;
 using Alfred.Gateway.Configuration;
 using Microsoft.AspNetCore.RateLimiting;
-using System.Threading.RateLimiting;
 
 namespace Alfred.Gateway.Extensions;
 
@@ -12,7 +12,8 @@ public static class YarpExtensions
     /// <summary>
     /// Adds YARP reverse proxy with rate limiting configuration
     /// </summary>
-    public static IServiceCollection AddAlfredYarp(this IServiceCollection services, IConfiguration configuration, GatewayConfiguration config)
+    public static IServiceCollection AddAlfredYarp(this IServiceCollection services, IConfiguration configuration,
+        GatewayConfiguration config)
     {
         // 1. Add YARP Reverse Proxy
         services.AddReverseProxy()
@@ -39,8 +40,8 @@ public static class YarpExtensions
             // Global Limiter - Áp dụng cho tất cả endpoint
             options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
                 RateLimitPartition.GetFixedWindowLimiter(
-                    partitionKey: httpContext.User.Identity?.Name ?? httpContext.Request.Headers.Host.ToString(),
-                    factory: partition => new FixedWindowRateLimiterOptions
+                    httpContext.User.Identity?.Name ?? httpContext.Request.Headers.Host.ToString(),
+                    partition => new FixedWindowRateLimiterOptions
                     {
                         AutoReplenishment = true,
                         PermitLimit = permitLimit,

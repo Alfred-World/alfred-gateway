@@ -14,7 +14,7 @@ public class GlobalExceptionMiddleware
     private readonly IHostEnvironment _environment;
 
     public GlobalExceptionMiddleware(
-        RequestDelegate next, 
+        RequestDelegate next,
         ILogger<GlobalExceptionMiddleware> logger,
         IHostEnvironment environment)
     {

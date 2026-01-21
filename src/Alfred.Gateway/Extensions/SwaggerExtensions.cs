@@ -13,7 +13,7 @@ public static class SwaggerExtensions
     public static IServiceCollection AddAlfredSwagger(this IServiceCollection services)
     {
         services.AddEndpointsApiExplorer();
-        
+
         services.AddSwaggerGen(options =>
         {
             options.SwaggerDoc("v1", new OpenApiInfo
@@ -31,7 +31,8 @@ public static class SwaggerExtensions
             // Add JWT Bearer authentication
             options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
             {
-                Description = "JWT Authorization header using the Bearer scheme. Enter 'Bearer' [space] and then your token",
+                Description =
+                    "JWT Authorization header using the Bearer scheme. Enter 'Bearer' [space] and then your token",
                 Name = "Authorization",
                 In = ParameterLocation.Header,
                 Type = SecuritySchemeType.Http,
@@ -64,20 +65,20 @@ public static class SwaggerExtensions
     public static IApplicationBuilder UseAlfredSwagger(this IApplicationBuilder app, IConfiguration configuration)
     {
         app.UseSwagger();
-        
+
         app.UseSwaggerUI(options =>
         {
             // Add cache-busting query parameter
             var cacheBuster = $"?v={DateTime.UtcNow.Ticks}";
-            
+
             // Gateway's own swagger
             options.SwaggerEndpoint($"/swagger/v1/swagger.json{cacheBuster}", "Gateway API v1");
-            
+
             // Aggregated backend services swagger - use proxy routes through gateway
             // These will be proxied through YARP to avoid CORS issues
             options.SwaggerEndpoint($"/api/identity/swagger/v1/swagger.json{cacheBuster}", "Identity Service API v1");
             options.SwaggerEndpoint($"/api/core/swagger/v1/swagger.json{cacheBuster}", "Core Service API v1");
-            
+
             options.RoutePrefix = "swagger";
             options.DocumentTitle = "Alfred API Gateway - API Documentation";
             options.DisplayRequestDuration();

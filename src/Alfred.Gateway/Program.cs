@@ -1,6 +1,7 @@
 using Alfred.Gateway.Configuration;
 using Alfred.Gateway.Extensions;
 using Alfred.Gateway.Middlewares;
+using Microsoft.AspNetCore.HttpOverrides;
 
 // ====================================================================================
 // 1. LOAD ENVIRONMENT VARIABLES
@@ -49,6 +50,18 @@ builder.Services.AddHealthChecks();
 // Add Swagger with API aggregation
 builder.Services.AddAlfredSwagger();
 
+// Configure Forwarded Headers for reverse proxy support
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | 
+                                ForwardedHeaders.XForwardedProto | 
+                                ForwardedHeaders.XForwardedHost;
+    // Clear KnownNetworks and KnownProxies for development
+    // In production, you should configure these properly
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 // ====================================================================================
 // 3. BUILD APPLICATION
 // ====================================================================================
@@ -57,6 +70,9 @@ var app = builder.Build();
 // ====================================================================================
 // 4. MIDDLEWARE PIPELINE (THỨ TỰ CỰC KỲ QUAN TRỌNG!)
 // ====================================================================================
+
+// 0. Forwarded Headers - PHẢI ĐẶT ĐẦU TIÊN để các middleware khác nhận đúng scheme/host
+app.UseForwardedHeaders();
 
 // 1. Global Exception Handler - Bắt lỗi toàn cục
 app.UseGlobalExceptionHandler();

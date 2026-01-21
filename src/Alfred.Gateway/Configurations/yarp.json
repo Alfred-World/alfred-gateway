@@ -25,8 +25,13 @@
         "ClusterId": "identity-cluster",
         "AuthorizationPolicy": "AllowAnonymous",
         "Match": {
-          "Path": "/api/v1/identity/auth/{**remainder}"
+          "Path": "/identity/auth/{**remainder}"
         },
+        "Transforms": [
+          { "X-Forwarded": "Set" },
+          { "RequestHeader": "X-Forwarded-Proto", "Set": "https" },
+          { "RequestHeader": "X-Forwarded-Host", "Set": "gateway.test" }
+        ],
         "Order": 1
       },
       "identity-connect-route": {
@@ -35,6 +40,11 @@
         "Match": {
           "Path": "/connect/{**remainder}"
         },
+        "Transforms": [
+          { "X-Forwarded": "Set" },
+          { "RequestHeader": "X-Forwarded-Proto", "Set": "https" },
+          { "RequestHeader": "X-Forwarded-Host", "Set": "gateway.test" }
+        ],
         "Order": 1
       },
       "identity-wellknown-route": {
@@ -49,7 +59,7 @@
         "ClusterId": "identity-cluster",
         "AuthorizationPolicy": "Authenticated",
         "Match": {
-          "Path": "/api/applications/{**remainder}"
+          "Path": "/applications/{**remainder}"
         },
         "Order": 1
       },

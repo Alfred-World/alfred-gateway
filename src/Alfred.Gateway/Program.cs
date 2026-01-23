@@ -2,6 +2,7 @@ using Alfred.Gateway.Configuration;
 using Alfred.Gateway.Extensions;
 using Alfred.Gateway.Middlewares;
 using Microsoft.AspNetCore.HttpOverrides;
+using StackExchange.Redis;
 
 // ====================================================================================
 // 1. LOAD ENVIRONMENT VARIABLES
@@ -23,10 +24,11 @@ builder.Services.AddSingleton(gatewayConfig);
 // ====================================================================================
 // 2. CONFIGURATION - Load file cấu hình riêng cho YARP
 // ====================================================================================
-builder.Configuration.AddJsonFile(
-    "Configurations/yarp.json",
-    false,
-    true);
+// ====================================================================================
+// 2. CONFIGURATION - Load file cấu hình riêng cho YARP
+// ====================================================================================
+builder.Configuration.AddJsonFile("Configurations/yarp.json", false, true);
+builder.Configuration.AddJsonFile($"Configurations/yarp.{environment}.json", true, true);
 
 // ====================================================================================
 // 3. SERVICES REGISTRATION - Đăng ký các service cần thiết
@@ -46,6 +48,36 @@ builder.Services.AddHealthChecks();
 
 // Add Swagger with API aggregation
 builder.Services.AddAlfredSwagger();
+
+// Add Redis for Dynamic Authorization (optional - falls back gracefully)
+var redisHost = Environment.GetEnvironmentVariable("REDIS_HOST");
+if (!string.IsNullOrEmpty(redisHost))
+{
+    var redisPort = Environment.GetEnvironmentVariable("REDIS_PORT") ?? "6379";
+    var redisPassword = Environment.GetEnvironmentVariable("REDIS_PASSWORD");
+    
+    var configOptions = new ConfigurationOptions
+    {
+        EndPoints = { $"{redisHost}:{redisPort}" },
+        AbortOnConnectFail = false,
+        ConnectRetry = 3,
+        ConnectTimeout = 5000
+    };
+    
+    if (!string.IsNullOrEmpty(redisPassword))
+        configOptions.Password = redisPassword;
+    
+    try
+    {
+        var redis = ConnectionMultiplexer.Connect(configOptions);
+        builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
+        Console.WriteLine($"✅ Connected to Redis at {redisHost}:{redisPort}");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"⚠️ Failed to connect to Redis: {ex.Message}. Dynamic authorization will be limited.");
+    }
+}
 
 // Configure Forwarded Headers for reverse proxy support
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
@@ -75,7 +107,10 @@ app.UseForwardedHeaders();
 app.UseGlobalExceptionHandler();
 
 // 2. Swagger - PHẢI ĐẶT TRƯỚC YARP để không bị proxy chặn
-app.UseAlfredSwagger(builder.Configuration);
+if (app.Environment.IsDevelopment())
+{
+    app.UseAlfredSwagger(builder.Configuration);
+}
 
 // 3. HTTPS Redirection (trong production nên bật)
 if (!app.Environment.IsDevelopment()) app.UseHttpsRedirection();
@@ -89,7 +124,10 @@ app.UseAuthentication();
 // 6. Authorization - Check "Mày được làm gì?" (check permissions/roles)
 app.UseAuthorization();
 
-// 7. Rate Limiting - Check "Mày spam à?" (prevent DDoS)
+// 7. Dynamic Authorization - Check permissions from Redis cache
+app.UseDynamicAuthorization();
+
+// 8. Rate Limiting - Check "Mày spam à?" (prevent DDoS)
 app.UseRateLimiter();
 
 // ====================================================================================

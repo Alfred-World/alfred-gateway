@@ -121,7 +121,7 @@
       "identity-cluster": {
         "Destinations": {
           "destination1": {
-            "Address": "http://localhost:8100"
+            "Address": "http://alfred-identity:8100"
           }
         },
         "HealthCheck": {
@@ -137,7 +137,7 @@
       "core-cluster": {
         "Destinations": {
           "destination1": {
-            "Address": "http://localhost:8200"
+            "Address": "http://alfred-core:8200"
           }
         },
         "HealthCheck": {

@@ -1,0 +1,20 @@
+{
+  "ReverseProxy": {
+    "Clusters": {
+      "identity-cluster": {
+        "Destinations": {
+          "destination1": {
+            "Address": "http://localhost:8100"
+          }
+        }
+      },
+      "core-cluster": {
+        "Destinations": {
+          "destination1": {
+            "Address": "http://localhost:8200"
+          }
+        }
+      }
+    }
+  }
+}

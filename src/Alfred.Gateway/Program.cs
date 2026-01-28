@@ -55,7 +55,7 @@ if (!string.IsNullOrEmpty(redisHost))
 {
     var redisPort = Environment.GetEnvironmentVariable("REDIS_PORT") ?? "6379";
     var redisPassword = Environment.GetEnvironmentVariable("REDIS_PASSWORD");
-    
+
     var configOptions = new ConfigurationOptions
     {
         EndPoints = { $"{redisHost}:{redisPort}" },
@@ -63,10 +63,10 @@ if (!string.IsNullOrEmpty(redisHost))
         ConnectRetry = 3,
         ConnectTimeout = 5000
     };
-    
+
     if (!string.IsNullOrEmpty(redisPassword))
         configOptions.Password = redisPassword;
-    
+
     try
     {
         var redis = ConnectionMultiplexer.Connect(configOptions);
@@ -107,10 +107,7 @@ app.UseForwardedHeaders();
 app.UseGlobalExceptionHandler();
 
 // 2. Swagger - PHẢI ĐẶT TRƯỚC YARP để không bị proxy chặn
-if (app.Environment.IsDevelopment())
-{
-    app.UseAlfredSwagger(builder.Configuration);
-}
+if (app.Environment.IsDevelopment()) app.UseAlfredSwagger(builder.Configuration);
 
 // 3. HTTPS Redirection (trong production nên bật)
 if (!app.Environment.IsDevelopment()) app.UseHttpsRedirection();

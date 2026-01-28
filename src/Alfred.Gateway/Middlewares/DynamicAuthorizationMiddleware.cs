@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
-
+using Alfred.Gateway.Attributes;
 using StackExchange.Redis;
 
 namespace Alfred.Gateway.Middlewares;
@@ -46,11 +46,9 @@ public class DynamicAuthorizationMiddleware
 
         // If no roles found, try alternative claim type
         if (roles.Count == 0)
-        {
             roles = context.User.FindAll("role")
                 .Select(c => c.Value.ToUpperInvariant())
                 .ToList();
-        }
 
         // Check for Owner role - Owner has ALL permissions (bypass check)
         if (roles.Contains("OWNER"))
@@ -61,35 +59,29 @@ public class DynamicAuthorizationMiddleware
 
         // Get all permissions for user's roles from Redis
         var userPermissions = new HashSet<string>();
-        
+
         if (_redis != null)
         {
             var db = _redis.GetDatabase();
-            
+
             foreach (var role in roles)
-            {
                 try
                 {
                     var cacheKey = $"{_cacheKeyPrefix}{role}";
                     var json = await db.StringGetAsync(cacheKey);
-                    
+
                     if (json.HasValue)
                     {
                         var permissions = JsonSerializer.Deserialize<List<string>>(json.ToString());
                         if (permissions != null)
-                        {
                             foreach (var perm in permissions)
-                            {
                                 userPermissions.Add(perm);
-                            }
-                        }
                     }
                 }
                 catch (Exception ex)
                 {
                     _logger.LogWarning(ex, "Failed to get permissions for role {Role} from Redis", role);
                 }
-            }
         }
 
         // Check if user has wildcard permission ("*" = all access)
@@ -102,7 +94,7 @@ public class DynamicAuthorizationMiddleware
         // Get required permission from endpoint metadata (if any)
         var endpoint = context.GetEndpoint();
         var requiredPermissions = endpoint?.Metadata
-            .GetOrderedMetadata<Attributes.RequirePermissionAttribute>()
+            .GetOrderedMetadata<RequirePermissionAttribute>()
             .Select(a => a.Permission.ToLowerInvariant())
             .ToList() ?? new List<string>();
 
@@ -114,7 +106,7 @@ public class DynamicAuthorizationMiddleware
         }
 
         // Check if user has at least one of the required permissions
-        var hasPermission = requiredPermissions.Any(required => 
+        var hasPermission = requiredPermissions.Any(required =>
             userPermissions.Contains(required) ||
             userPermissions.Any(up => MatchesWildcard(up, required)));
 
@@ -128,7 +120,7 @@ public class DynamicAuthorizationMiddleware
 
             context.Response.StatusCode = StatusCodes.Status403Forbidden;
             context.Response.ContentType = "application/json";
-            
+
             var response = JsonSerializer.Serialize(new
             {
                 success = false,
@@ -142,7 +134,7 @@ public class DynamicAuthorizationMiddleware
                     }
                 }
             });
-            
+
             await context.Response.WriteAsync(response);
             return;
         }
@@ -157,13 +149,13 @@ public class DynamicAuthorizationMiddleware
     private static bool MatchesWildcard(string userPermission, string requiredPermission)
     {
         if (userPermission == "*") return true;
-        
+
         if (userPermission.EndsWith(":*"))
         {
             var prefix = userPermission[..^2]; // Remove ":*"
             return requiredPermission.StartsWith(prefix + ":");
         }
-        
+
         return false;
     }
 }

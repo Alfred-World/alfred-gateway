@@ -34,7 +34,7 @@ public static class AuthExtensions
                     ValidateAudience = false, // Có thể bật lên nếu cần validate audience
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
-                    ClockSkew = TimeSpan.FromMinutes(5) // Cho phép sai lệch thời gian 5 phút
+                    ClockSkew = TimeSpan.Zero // Không cho phép sai lệch thời gian (nghiêm ngặt)
                 };
 
                 // Event handlers for debugging and custom logic

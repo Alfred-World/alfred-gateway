@@ -44,9 +44,9 @@ USER alfred
 EXPOSE 8000
 EXPOSE 8001
 
-# Health check
+# Health check using wget (available by default in aspnet image)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:8000/health || exit 1
 
 # Set environment variables
 ENV ASPNETCORE_URLS=http://+:8000

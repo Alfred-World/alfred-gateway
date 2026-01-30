@@ -1,6 +1,8 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Text.Json;
 using Alfred.Gateway.Configuration;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Alfred.Gateway.Extensions;
@@ -10,11 +12,18 @@ namespace Alfred.Gateway.Extensions;
 /// </summary>
 public static class AuthExtensions
 {
+    private static IList<JsonWebKey>? _cachedKeys;
+    private static DateTime _keysLastFetched = DateTime.MinValue;
+    private static readonly TimeSpan KeysCacheDuration = TimeSpan.FromHours(1);
+
     /// <summary>
     /// Adds JWT Bearer authentication and authorization policies
     /// </summary>
     public static IServiceCollection AddAlfredAuth(this IServiceCollection services, GatewayConfiguration config)
     {
+        // Pre-fetch JWKS on startup
+        var jwksUrl = $"{config.AuthAuthority}/.well-known/jwks.json";
+
         // Add Authentication with JWT Bearer
         services.AddAuthentication(options =>
             {
@@ -23,18 +32,23 @@ public static class AuthExtensions
             })
             .AddJwtBearer(options =>
             {
-                // Identity Server configuration from env
-                options.Authority = config.AuthAuthority;
-                options.RequireHttpsMetadata = config.AuthRequireHttpsMetadata;
+                // Disable automatic metadata fetching (we'll handle keys manually)
+                options.Authority = null;
+                options.RequireHttpsMetadata = false;
 
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
                     ValidIssuer = config.AuthValidIssuer,
-                    ValidateAudience = false, // Có thể bật lên nếu cần validate audience
+                    ValidateAudience = false,
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
-                    ClockSkew = TimeSpan.Zero // Không cho phép sai lệch thời gian (nghiêm ngặt)
+                    ClockSkew = TimeSpan.Zero,
+                    // Custom key resolver to fetch from internal Identity Service
+                    IssuerSigningKeyResolver = (token, securityToken, kid, parameters) =>
+                    {
+                        return GetSigningKeys(jwksUrl);
+                    }
                 };
 
                 // Event handlers for debugging and custom logic
@@ -112,5 +126,37 @@ public static class AuthExtensions
         });
 
         return services;
+    }
+
+    /// <summary>
+    /// Fetch JWKS from Identity Service and cache the keys
+    /// </summary>
+    private static IEnumerable<SecurityKey> GetSigningKeys(string jwksUrl)
+    {
+        // Return cached keys if still valid
+        if (_cachedKeys != null && DateTime.UtcNow - _keysLastFetched < KeysCacheDuration)
+        {
+            return _cachedKeys;
+        }
+
+        try
+        {
+            using var httpClient = new HttpClient();
+            httpClient.Timeout = TimeSpan.FromSeconds(10);
+
+            var response = httpClient.GetStringAsync(jwksUrl).GetAwaiter().GetResult();
+            var jwks = new JsonWebKeySet(response);
+
+            _cachedKeys = jwks.Keys.ToList();
+            _keysLastFetched = DateTime.UtcNow;
+
+            return _cachedKeys;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to fetch JWKS from {jwksUrl}: {ex.Message}");
+            // Return cached keys if available, even if expired
+            return _cachedKeys ?? Enumerable.Empty<SecurityKey>();
+        }
     }
 }

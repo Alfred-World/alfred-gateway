@@ -12,6 +12,7 @@ DotEnvLoader.LoadForEnvironment(environment);
 
 // Load and validate configuration from environment variables
 var gatewayConfig = new GatewayConfiguration();
+var mtlsConfig = new MtlsConfiguration();
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,15 +21,36 @@ builder.WebHost.ConfigureKestrel((context, options) => { options.ListenAnyIP(gat
 
 // Register GatewayConfiguration as singleton
 builder.Services.AddSingleton(gatewayConfig);
+builder.Services.AddSingleton(mtlsConfig);
 
 // ====================================================================================
 // 2. CONFIGURATION - Load file cấu hình riêng cho YARP
 // ====================================================================================
 // ====================================================================================
-// 2. CONFIGURATION - Load file cấu hình riêng cho YARP
+// 2. CONFIGURATION - Load file cấu hình riêng cho YARP (supports mTLS mode)
 // ====================================================================================
-builder.Configuration.AddJsonFile("Configurations/yarp.json", false, true);
-builder.Configuration.AddJsonFile($"Configurations/yarp.{environment}.json", true, true);
+if (mtlsConfig.Enabled)
+{
+    // Use mTLS configuration (HTTPS endpoints)
+    // In Development, use localhost URLs; in Production, use Docker service names
+    if (environment.Equals("Development", StringComparison.OrdinalIgnoreCase))
+    {
+        builder.Configuration.AddJsonFile("Configurations/yarp.mtls.Development.json", false, true);
+        Console.WriteLine("✅ Loading YARP mTLS Development configuration (localhost HTTPS endpoints)");
+    }
+    else
+    {
+        builder.Configuration.AddJsonFile("Configurations/yarp.mtls.json", false, true);
+        Console.WriteLine("✅ Loading YARP mTLS Production configuration (Docker HTTPS endpoints)");
+    }
+}
+else
+{
+    // Use standard HTTP configuration
+    builder.Configuration.AddJsonFile("Configurations/yarp.json", false, true);
+    builder.Configuration.AddJsonFile($"Configurations/yarp.{environment}.json", true, true);
+    Console.WriteLine("ℹ️ Loading YARP standard configuration (HTTP endpoints)");
+}
 
 // ====================================================================================
 // 3. SERVICES REGISTRATION - Đăng ký các service cần thiết
@@ -40,8 +62,8 @@ builder.Services.AddAlfredCors(gatewayConfig);
 // Add Authentication & Authorization (kiểm tra JWT Token)
 builder.Services.AddAlfredAuth(gatewayConfig);
 
-// Add YARP Reverse Proxy & Rate Limiting
-builder.Services.AddAlfredYarp(builder.Configuration, gatewayConfig);
+// Add YARP Reverse Proxy & Rate Limiting (with mTLS support)
+builder.Services.AddAlfredYarp(builder.Configuration, gatewayConfig, mtlsConfig);
 
 // Add Health Checks (để monitoring biết service còn sống không)
 builder.Services.AddHealthChecks();
@@ -158,6 +180,7 @@ app.Logger.LogInformation("🌐 Listening on: http://{Hostname}:{Port}", gateway
 app.Logger.LogInformation("🔒 Auth Authority: {Authority}", gatewayConfig.AuthAuthority);
 app.Logger.LogInformation("🎯 Identity Service: {Url}", gatewayConfig.IdentityServiceUrl);
 app.Logger.LogInformation("🎯 Core Service: {Url}", gatewayConfig.CoreServiceUrl);
+app.Logger.LogInformation("🔐 mTLS Enabled: {Enabled}", mtlsConfig.Enabled);
 
 app.Run();
 

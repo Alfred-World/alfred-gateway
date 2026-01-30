@@ -1,0 +1,193 @@
+{
+  "ReverseProxy": {
+    "Routes": {
+      "identity-swagger-route": {
+        "ClusterId": "identity-cluster",
+        "AuthorizationPolicy": "AllowAnonymous",
+        "Match": {
+          "Path": "/api/identity/swagger/{**remainder}"
+        },
+        "Transforms": [
+          {
+            "PathPattern": "/swagger/{**remainder}"
+          }
+        ]
+      },
+      "core-swagger-route": {
+        "ClusterId": "core-cluster",
+        "AuthorizationPolicy": "AllowAnonymous",
+        "Match": {
+          "Path": "/api/core/swagger/{**remainder}"
+        },
+        "Transforms": [
+          {
+            "PathPattern": "/swagger/{**remainder}"
+          }
+        ]
+      },
+      "identity-auth-route": {
+        "ClusterId": "identity-cluster",
+        "AuthorizationPolicy": "AllowAnonymous",
+        "Match": {
+          "Path": "/identity/auth/{**remainder}"
+        },
+        "Transforms": [
+          {
+            "X-Forwarded": "Set"
+          },
+          {
+            "RequestHeader": "X-Forwarded-Proto",
+            "Set": "https"
+          },
+          {
+            "RequestHeader": "X-Forwarded-Host",
+            "Set": "gateway.test"
+          }
+        ],
+        "Order": 1
+      },
+      "identity-connect-route": {
+        "ClusterId": "identity-cluster",
+        "AuthorizationPolicy": "AllowAnonymous",
+        "Match": {
+          "Path": "/connect/{**remainder}"
+        },
+        "Transforms": [
+          {
+            "X-Forwarded": "Set"
+          },
+          {
+            "RequestHeader": "X-Forwarded-Proto",
+            "Set": "https"
+          },
+          {
+            "RequestHeader": "X-Forwarded-Host",
+            "Set": "gateway.test"
+          }
+        ],
+        "Order": 1
+      },
+      "identity-wellknown-route": {
+        "ClusterId": "identity-cluster",
+        "AuthorizationPolicy": "AllowAnonymous",
+        "Match": {
+          "Path": "/.well-known/{**remainder}"
+        },
+        "Order": 1
+      },
+      "identity-applications-route": {
+        "ClusterId": "identity-cluster",
+        "AuthorizationPolicy": "Authenticated",
+        "Match": {
+          "Path": "/applications/{**remainder}"
+        },
+        "Order": 1
+      },
+      "identity-roles-route": {
+        "ClusterId": "identity-cluster",
+        "AuthorizationPolicy": "Authenticated",
+        "Match": {
+          "Path": "/roles/{**remainder}"
+        },
+        "Order": 1
+      },
+      "identity-permissions-route": {
+        "ClusterId": "identity-cluster",
+        "AuthorizationPolicy": "Authenticated",
+        "Match": {
+          "Path": "/permissions/{**remainder}"
+        },
+        "Order": 1
+      },
+      "identity-user-route": {
+        "ClusterId": "identity-cluster",
+        "AuthorizationPolicy": "Authenticated",
+        "Match": {
+          "Path": "/users/{**remainder}"
+        },
+        "Order": 1
+      },
+      "core-route": {
+        "ClusterId": "core-cluster",
+        "AuthorizationPolicy": "Authenticated",
+        "RateLimiterPolicy": "fixed-window",
+        "Match": {
+          "Path": "/api/{**remainder}"
+        },
+        "Order": 100
+      },
+      "health-check-identity-route": {
+        "ClusterId": "identity-health-cluster",
+        "AuthorizationPolicy": "AllowAnonymous",
+        "Match": {
+          "Path": "/health/identity"
+        },
+        "Transforms": [
+          {
+            "PathPattern": "/health"
+          }
+        ]
+      },
+      "health-check-core-route": {
+        "ClusterId": "core-health-cluster",
+        "AuthorizationPolicy": "AllowAnonymous",
+        "Match": {
+          "Path": "/health/core"
+        },
+        "Transforms": [
+          {
+            "PathPattern": "/health"
+          }
+        ]
+      }
+    },
+    "Clusters": {
+      "identity-cluster": {
+        "Destinations": {
+          "destination1": {
+            "Address": "https://alfred-identity:8101"
+          }
+        },
+        "HealthCheck": {
+          "Active": {
+            "Enabled": true,
+            "Interval": "00:00:30",
+            "Timeout": "00:00:10",
+            "Policy": "ConsecutiveFailures",
+            "Path": "/health"
+          }
+        }
+      },
+      "identity-health-cluster": {
+        "Destinations": {
+          "destination1": {
+            "Address": "http://alfred-identity:8100"
+          }
+        }
+      },
+      "core-cluster": {
+        "Destinations": {
+          "destination1": {
+            "Address": "https://alfred-core:8201"
+          }
+        },
+        "HealthCheck": {
+          "Active": {
+            "Enabled": true,
+            "Interval": "00:00:30",
+            "Timeout": "00:00:10",
+            "Policy": "ConsecutiveFailures",
+            "Path": "/health"
+          }
+        }
+      },
+      "core-health-cluster": {
+        "Destinations": {
+          "destination1": {
+            "Address": "http://alfred-core:8200"
+          }
+        }
+      }
+    }
+  }
+}

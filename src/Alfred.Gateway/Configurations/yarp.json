@@ -185,6 +185,22 @@
             "Path": "/health"
           }
         }
+      },
+      "notification-cluster": {
+        "Destinations": {
+          "destination1": {
+            "Address": "http://alfred-notification:8300"
+          }
+        },
+        "HealthCheck": {
+          "Active": {
+            "Enabled": true,
+            "Interval": "00:00:30",
+            "Timeout": "00:00:10",
+            "Policy": "ConsecutiveFailures",
+            "Path": "/health"
+          }
+        }
       }
     }
   }

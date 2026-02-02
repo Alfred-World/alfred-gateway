@@ -1,5 +1,39 @@
 {
   "ReverseProxy": {
+    "Routes": {
+      "notification-swagger-route": {
+        "ClusterId": "notification-cluster",
+        "AuthorizationPolicy": "AllowAnonymous",
+        "Match": {
+          "Path": "/api/notification/swagger/{**remainder}"
+        },
+        "Transforms": [
+          {
+            "PathPattern": "/{**remainder}"
+          }
+        ]
+      },
+      "notification-templates-route": {
+        "ClusterId": "notification-cluster",
+        "AuthorizationPolicy": "Authenticated",
+        "Match": {
+          "Path": "/templates/{**remainder}"
+        },
+        "Order": 1
+      },
+      "health-check-notification-route": {
+        "ClusterId": "notification-health-cluster",
+        "AuthorizationPolicy": "AllowAnonymous",
+        "Match": {
+          "Path": "/health/notification"
+        },
+        "Transforms": [
+          {
+            "PathPattern": "/health"
+          }
+        ]
+      }
+    },
     "Clusters": {
       "identity-cluster": {
         "Destinations": {
@@ -12,6 +46,13 @@
         "Destinations": {
           "destination1": {
             "Address": "http://localhost:8200"
+          }
+        }
+      },
+      "notification-cluster": {
+        "Destinations": {
+          "destination1": {
+            "Address": "http://localhost:8300"
           }
         }
       }

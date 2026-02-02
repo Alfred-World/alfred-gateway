@@ -25,6 +25,18 @@
           }
         ]
       },
+      "notification-swagger-route": {
+        "ClusterId": "notification-cluster",
+        "AuthorizationPolicy": "AllowAnonymous",
+        "Match": {
+          "Path": "/api/notification/swagger/{**remainder}"
+        },
+        "Transforms": [
+          {
+            "PathPattern": "/swagger/{**remainder}"
+          }
+        ]
+      },
       "identity-auth-route": {
         "ClusterId": "identity-cluster",
         "AuthorizationPolicy": "AllowAnonymous",

@@ -139,6 +139,38 @@
             "PathPattern": "/health"
           }
         ]
+      },
+      "notification-swagger-route": {
+        "ClusterId": "notification-cluster",
+        "AuthorizationPolicy": "AllowAnonymous",
+        "Match": {
+          "Path": "/api/notification/swagger/{**remainder}"
+        },
+        "Transforms": [
+          {
+            "PathPattern": "/swagger/{**remainder}"
+          }
+        ]
+      },
+      "notification-templates-route": {
+        "ClusterId": "notification-cluster",
+        "AuthorizationPolicy": "Authenticated",
+        "Match": {
+          "Path": "/templates/{**remainder}"
+        },
+        "Order": 1
+      },
+      "health-check-notification-route": {
+        "ClusterId": "notification-health-cluster",
+        "AuthorizationPolicy": "AllowAnonymous",
+        "Match": {
+          "Path": "/health/notification"
+        },
+        "Transforms": [
+          {
+            "PathPattern": "/health"
+          }
+        ]
       }
     },
     "Clusters": {
@@ -185,6 +217,29 @@
         "Destinations": {
           "destination1": {
             "Address": "http://localhost:8200"
+          }
+        }
+      },
+      "notification-cluster": {
+        "Destinations": {
+          "destination1": {
+            "Address": "http://localhost:8300"
+          }
+        },
+        "HealthCheck": {
+          "Active": {
+            "Enabled": true,
+            "Interval": "00:00:30",
+            "Timeout": "00:00:10",
+            "Policy": "ConsecutiveFailures",
+            "Path": "/health"
+          }
+        }
+      },
+      "notification-health-cluster": {
+        "Destinations": {
+          "destination1": {
+            "Address": "http://localhost:8300"
           }
         }
       }

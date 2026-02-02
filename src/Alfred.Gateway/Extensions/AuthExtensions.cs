@@ -62,6 +62,13 @@ public static class AuthExtensions
                     },
                     OnChallenge = context =>
                     {
+                        // Allow Swagger to proceed (e.g. for anonymous access or token refresh)
+                        // without forcing a JSON error response that breaks the UI
+                        if (context.Request.Path.Value?.Contains("/swagger", StringComparison.OrdinalIgnoreCase) == true)
+                        {
+                            return Task.CompletedTask;
+                        }
+
                         context.HandleResponse();
                         context.Response.StatusCode = StatusCodes.Status401Unauthorized;
                         context.Response.ContentType = "application/json";

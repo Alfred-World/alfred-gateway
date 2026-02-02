@@ -78,6 +78,7 @@ public static class SwaggerExtensions
             // These will be proxied through YARP to avoid CORS issues
             options.SwaggerEndpoint($"/api/identity/swagger/v1/swagger.json{cacheBuster}", "Identity Service API v1");
             options.SwaggerEndpoint($"/api/core/swagger/v1/swagger.json{cacheBuster}", "Core Service API v1");
+            options.SwaggerEndpoint($"/api/notification/swagger/swagger-json{cacheBuster}", "Notification Service API v1");
 
             options.RoutePrefix = "swagger";
             options.DocumentTitle = "Alfred API Gateway - API Documentation";

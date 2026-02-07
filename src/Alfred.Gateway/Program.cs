@@ -109,7 +109,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
                                ForwardedHeaders.XForwardedHost;
     // Clear KnownNetworks and KnownProxies for development
     // In production, you should configure these properly
-    options.KnownNetworks.Clear();
+    options.KnownIPNetworks.Clear();
     options.KnownProxies.Clear();
 });
 

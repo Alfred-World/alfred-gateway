@@ -1,18 +1,25 @@
+using Alfred.Gateway.Middlewares;
 using Microsoft.OpenApi.Models;
+using Scalar.AspNetCore;
 
 namespace Alfred.Gateway.Extensions;
 
 /// <summary>
-/// Extension methods for configuring Swagger with API aggregation
+/// Extension methods for configuring Scalar API documentation with API aggregation
 /// </summary>
-public static class SwaggerExtensions
+public static class ScalarExtensions
 {
     /// <summary>
-    /// Adds Swagger with aggregated API documentation from backend services
+    /// Adds OpenAPI spec generation with aggregated API documentation from backend services
     /// </summary>
-    public static IServiceCollection AddAlfredSwagger(this IServiceCollection services)
+    public static IServiceCollection AddAlfredScalar(this IServiceCollection services)
     {
         services.AddEndpointsApiExplorer();
+        services.AddHttpClient("OpenApiAggregator")
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
+            });
 
         services.AddSwaggerGen(options =>
         {
@@ -60,32 +67,24 @@ public static class SwaggerExtensions
     }
 
     /// <summary>
-    /// Uses Swagger UI with aggregated backend services
+    /// Uses Scalar API reference with aggregated backend services
     /// </summary>
-    public static IApplicationBuilder UseAlfredSwagger(this IApplicationBuilder app, IConfiguration configuration)
+    public static WebApplication UseAlfredScalar(this WebApplication app)
     {
+        // Serve gateway's own OpenAPI spec (used internally by aggregator)
         app.UseSwagger();
 
-        app.UseSwaggerUI(options =>
+        // Custom endpoint that merges gateway + backend service specs
+        app.MapAggregatedOpenApi();
+
+        // Single Scalar page showing all APIs
+        app.MapScalarApiReference("/docs", c =>
         {
-            // Add cache-busting query parameter
-            var cacheBuster = $"?v={DateTime.UtcNow.Ticks}";
-
-            // Gateway's own swagger
-            options.SwaggerEndpoint($"/swagger/v1/swagger.json{cacheBuster}", "Gateway API v1");
-
-            // Aggregated backend services swagger - use proxy routes through gateway
-            // These will be proxied through YARP to avoid CORS issues
-            options.SwaggerEndpoint($"/api/identity/swagger/v1/swagger.json{cacheBuster}", "Identity Service API v1");
-            options.SwaggerEndpoint($"/api/core/swagger/v1/swagger.json{cacheBuster}", "Core Service API v1");
-            options.SwaggerEndpoint($"/api/notification/swagger/swagger-json{cacheBuster}", "Notification Service API v1");
-
-            options.RoutePrefix = "swagger";
-            options.DocumentTitle = "Alfred API Gateway - API Documentation";
-            options.DisplayRequestDuration();
-            options.EnableDeepLinking();
-            options.EnableFilter();
-            options.ShowExtensions();
+            c.Title = "Alfred API Gateway";
+            c.Theme = ScalarTheme.Purple;
+            c.DefaultHttpClient = new(ScalarTarget.CSharp, ScalarClient.HttpClient);
+            c.OpenApiRoutePattern = "/api-docs/{documentName}.json";
+            c.PersistentAuthentication = true;
         });
 
         return app;

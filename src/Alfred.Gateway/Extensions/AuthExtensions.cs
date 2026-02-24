@@ -62,9 +62,12 @@ public static class AuthExtensions
                     },
                     OnChallenge = context =>
                     {
-                        // Allow Swagger to proceed (e.g. for anonymous access or token refresh)
+                        // Allow Swagger/Scalar/Docs to proceed (e.g. for anonymous access or token refresh)
                         // without forcing a JSON error response that breaks the UI
-                        if (context.Request.Path.Value?.Contains("/swagger", StringComparison.OrdinalIgnoreCase) == true)
+                        if (context.Request.Path.Value?.Contains("/swagger", StringComparison.OrdinalIgnoreCase) == true ||
+                            context.Request.Path.Value?.Contains("/scalar", StringComparison.OrdinalIgnoreCase) == true ||
+                            context.Request.Path.Value?.Contains("/docs", StringComparison.OrdinalIgnoreCase) == true ||
+                            context.Request.Path.Value?.Contains("/api-docs", StringComparison.OrdinalIgnoreCase) == true)
                         {
                             return Task.CompletedTask;
                         }

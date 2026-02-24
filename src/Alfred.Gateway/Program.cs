@@ -68,8 +68,8 @@ builder.Services.AddAlfredYarp(builder.Configuration, gatewayConfig, mtlsConfig)
 // Add Health Checks (để monitoring biết service còn sống không)
 builder.Services.AddHealthChecks();
 
-// Add Swagger with API aggregation
-builder.Services.AddAlfredSwagger();
+// Add Scalar API documentation
+builder.Services.AddAlfredScalar();
 
 // Add Redis for Dynamic Authorization (optional - falls back gracefully)
 var redisHost = Environment.GetEnvironmentVariable("REDIS_HOST");
@@ -128,8 +128,8 @@ app.UseForwardedHeaders();
 // 1. Global Exception Handler - Bắt lỗi toàn cục
 app.UseGlobalExceptionHandler();
 
-// 2. Swagger - PHẢI ĐẶT TRƯỚC YARP để không bị proxy chặn
-if (app.Environment.IsDevelopment()) app.UseAlfredSwagger(builder.Configuration);
+// 2. Scalar API reference - PHẢI ĐẶT TRƯỚC YARP để không bị proxy chặn
+if (app.Environment.IsDevelopment()) app.UseAlfredScalar();
 
 // 3. HTTPS Redirection (trong production nên bật)
 if (!app.Environment.IsDevelopment()) app.UseHttpsRedirection();

@@ -4,16 +4,20 @@ using Alfred.Gateway.Configuration;
 namespace Alfred.Gateway.Middlewares;
 
 /// <summary>
-/// Provides an endpoint that aggregates OpenAPI specs from backend services 
-/// into a single unified document for Scalar to consume.
+/// Provides endpoints that serve OpenAPI specs from backend services.
+/// 
+/// Supported document names:
+///   - "identity" → Identity Service spec only
+///   - "core"     → Core Service spec only
+///   - "v1"       → Aggregated spec (all services merged) for Scalar UI
 /// </summary>
 public static class OpenApiAggregator
 {
-    private static readonly (string Name, string SpecPath)[] BackendServices =
-    [
-        ("Identity Service", "/api/identity/swagger/v1/swagger.json"),
-        ("Core Service", "/api/core/swagger/v1/swagger.json")
-    ];
+    private static readonly Dictionary<string, (string Name, string SpecPath)> ServiceMap = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["identity"] = ("Identity Service", "/api/identity/swagger/v1/swagger.json"),
+        ["core"] = ("Core Service", "/api/core/swagger/v1/swagger.json")
+    };
 
     public static WebApplication MapAggregatedOpenApi(this WebApplication app)
     {
@@ -28,34 +32,106 @@ public static class OpenApiAggregator
             var client = httpClientFactory.CreateClient("OpenApiAggregator");
             client.BaseAddress = new Uri(baseUrl);
 
-            // 1. Fetch gateway's own OpenAPI spec
-            string gatewayJson;
+            // --- Per-service spec: /api-docs/identity.json or /api-docs/core.json ---
+            if (ServiceMap.TryGetValue(documentName, out var serviceInfo))
+            {
+                return await ServeServiceSpec(client, serviceInfo.Name, serviceInfo.SpecPath, logger);
+            }
+
+            // --- Aggregated spec: /api-docs/v1.json ---
+            return await ServeAggregatedSpec(client, documentName, logger);
+        })
+        .ExcludeFromDescription();
+
+        return app;
+    }
+
+    /// <summary>
+    /// Serves a single backend service's OpenAPI spec directly (pass-through).
+    /// </summary>
+    private static async Task<IResult> ServeServiceSpec(
+        HttpClient client,
+        string serviceName,
+        string specPath,
+        ILogger logger)
+    {
+        try
+        {
+            var json = await client.GetStringAsync(specPath);
+            return Results.Text(json, "application/json");
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to fetch OpenAPI spec for {Service}", serviceName);
+            return Results.Problem($"Failed to fetch OpenAPI spec for {serviceName}");
+        }
+    }
+
+    /// <summary>
+    /// Serves the aggregated OpenAPI spec that merges gateway + all backend services.
+    /// Used by Scalar UI to show all APIs in one page.
+    /// </summary>
+    private static async Task<IResult> ServeAggregatedSpec(
+        HttpClient client,
+        string documentName,
+        ILogger logger)
+    {
+        // 1. Fetch gateway's own OpenAPI spec
+        string gatewayJson;
+        try
+        {
+            gatewayJson = await client.GetStringAsync($"/swagger/{documentName}/swagger.json");
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to fetch gateway OpenAPI spec");
+            return Results.Problem("Failed to fetch gateway OpenAPI spec");
+        }
+
+        using var gatewaySpec = JsonDocument.Parse(gatewayJson);
+        var root = gatewaySpec.RootElement;
+
+        // 2. Collect all backend specs in parallel
+        var backendSpecs = new List<(string Name, JsonDocument Doc)>();
+        var fetchTasks = ServiceMap.Select(async kvp =>
+        {
             try
             {
-                gatewayJson = await client.GetStringAsync($"/swagger/{documentName}/swagger.json");
+                var json = await client.GetStringAsync(kvp.Value.SpecPath);
+                return (kvp.Value.Name, Doc: JsonDocument.Parse(json), Success: true);
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Failed to fetch gateway OpenAPI spec");
-                return Results.Problem("Failed to fetch gateway OpenAPI spec");
+                logger.LogWarning(ex, "Skipping {Service} - not available", kvp.Value.Name);
+                return (kvp.Value.Name, Doc: (JsonDocument?)null, Success: false);
             }
+        });
 
-            using var gatewaySpec = JsonDocument.Parse(gatewayJson);
-            var root = gatewaySpec.RootElement;
+        var results = await Task.WhenAll(fetchTasks);
+        foreach (var result in results)
+        {
+            if (result.Success && result.Doc != null)
+                backendSpecs.Add((result.Name, result.Doc));
+        }
 
-            // 2. Build merged document
+        try
+        {
+            // 3. Build merged document
             using var buffer = new MemoryStream();
             using (var writer = new Utf8JsonWriter(buffer))
             {
                 writer.WriteStartObject();
 
-                // Copy top-level properties (openapi, info, servers, security, tags)
+                // Copy top-level properties (openapi, info, servers, security) — skip tags, paths, components
                 foreach (var prop in root.EnumerateObject())
                 {
-                    if (prop.Name is "paths" or "components")
+                    if (prop.Name is "paths" or "components" or "tags")
                         continue;
                     prop.WriteTo(writer);
                 }
+
+                // -- Merge tags --
+                MergeTags(writer, root, backendSpecs);
 
                 // -- Merge paths --
                 writer.WritePropertyName("paths");
@@ -67,81 +143,139 @@ public static class OpenApiAggregator
                         path.WriteTo(writer);
                 }
 
-                // Fetch backend specs and write their paths inline
-                var backendSchemas = new List<(string Name, JsonElement Value)>();
-
-                foreach (var (serviceName, specPath) in BackendServices)
+                foreach (var (_, svcDoc) in backendSpecs)
                 {
-                    try
+                    if (svcDoc.RootElement.TryGetProperty("paths", out var svcPaths))
                     {
-                        var json = await client.GetStringAsync(specPath);
-                        using var svcSpec = JsonDocument.Parse(json);
-
-                        if (svcSpec.RootElement.TryGetProperty("paths", out var svcPaths))
-                        {
-                            foreach (var path in svcPaths.EnumerateObject())
-                                path.WriteTo(writer);
-                        }
-
-                        // Clone schemas so they survive JsonDocument disposal
-                        if (svcSpec.RootElement.TryGetProperty("components", out var svcComp) &&
-                            svcComp.TryGetProperty("schemas", out var svcSchemas))
-                        {
-                            foreach (var schema in svcSchemas.EnumerateObject())
-                                backendSchemas.Add((schema.Name, schema.Value.Clone()));
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogWarning(ex, "Skipping {Service} - not available", serviceName);
+                        foreach (var path in svcPaths.EnumerateObject())
+                            path.WriteTo(writer);
                     }
                 }
 
                 writer.WriteEndObject(); // end paths
 
-                // -- Merge components --
-                writer.WritePropertyName("components");
-                writer.WriteStartObject();
+                // -- Merge all components (schemas, parameters, requestBodies, responses, etc.) --
+                MergeComponents(writer, root, backendSpecs);
 
-                if (root.TryGetProperty("components", out var gwComp))
-                {
-                    foreach (var comp in gwComp.EnumerateObject())
-                    {
-                        if (comp.Name != "schemas")
-                            comp.WriteTo(writer);
-                    }
-                }
-
-                // Write all schemas (gateway + backend)
-                writer.WritePropertyName("schemas");
-                writer.WriteStartObject();
-
-                if (root.TryGetProperty("components", out var gwComp2) &&
-                    gwComp2.TryGetProperty("schemas", out var gwSchemas))
-                {
-                    foreach (var schema in gwSchemas.EnumerateObject())
-                    {
-                        writer.WritePropertyName(schema.Name);
-                        schema.Value.WriteTo(writer);
-                    }
-                }
-
-                foreach (var (name, value) in backendSchemas)
-                {
-                    writer.WritePropertyName(name);
-                    value.WriteTo(writer);
-                }
-
-                writer.WriteEndObject(); // end schemas
-                writer.WriteEndObject(); // end components
                 writer.WriteEndObject(); // end root
-            } // writer is flushed and disposed here
+            }
 
             var bytes = buffer.ToArray();
             return Results.Bytes(bytes, "application/json");
-        })
-        .ExcludeFromDescription();
+        }
+        finally
+        {
+            foreach (var (_, doc) in backendSpecs)
+                doc.Dispose();
+        }
+    }
 
-        return app;
+    /// <summary>
+    /// Merges tags from gateway and all backend service specs.
+    /// </summary>
+    private static void MergeTags(
+        Utf8JsonWriter writer,
+        JsonElement gatewayRoot,
+        List<(string Name, JsonDocument Doc)> backendSpecs)
+    {
+        var tagNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var tags = new List<JsonElement>();
+
+        // Collect gateway tags
+        if (gatewayRoot.TryGetProperty("tags", out var gwTags))
+        {
+            foreach (var tag in gwTags.EnumerateArray())
+            {
+                if (tag.TryGetProperty("name", out var name) && tagNames.Add(name.GetString()!))
+                    tags.Add(tag.Clone());
+            }
+        }
+
+        // Collect backend tags
+        foreach (var (_, svcDoc) in backendSpecs)
+        {
+            if (svcDoc.RootElement.TryGetProperty("tags", out var svcTags))
+            {
+                foreach (var tag in svcTags.EnumerateArray())
+                {
+                    if (tag.TryGetProperty("name", out var name) && tagNames.Add(name.GetString()!))
+                        tags.Add(tag.Clone());
+                }
+            }
+        }
+
+        if (tags.Count > 0)
+        {
+            writer.WritePropertyName("tags");
+            writer.WriteStartArray();
+            foreach (var tag in tags)
+                tag.WriteTo(writer);
+            writer.WriteEndArray();
+        }
+    }
+
+    /// <summary>
+    /// Merges all component types (schemas, parameters, requestBodies, responses, headers, etc.)
+    /// from gateway and backend services. Handles duplicate names by keeping the first occurrence.
+    /// </summary>
+    private static void MergeComponents(
+        Utf8JsonWriter writer,
+        JsonElement gatewayRoot,
+        List<(string Name, JsonDocument Doc)> backendSpecs)
+    {
+        // Discover all component sections across gateway + backend
+        var allSectionNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var componentSources = new List<JsonElement>();
+
+        if (gatewayRoot.TryGetProperty("components", out var gwComp))
+        {
+            componentSources.Add(gwComp);
+            foreach (var section in gwComp.EnumerateObject())
+                allSectionNames.Add(section.Name);
+        }
+
+        foreach (var (_, svcDoc) in backendSpecs)
+        {
+            if (svcDoc.RootElement.TryGetProperty("components", out var svcComp))
+            {
+                componentSources.Add(svcComp);
+                foreach (var section in svcComp.EnumerateObject())
+                    allSectionNames.Add(section.Name);
+            }
+        }
+
+        if (allSectionNames.Count == 0)
+            return;
+
+        writer.WritePropertyName("components");
+        writer.WriteStartObject();
+
+        foreach (var sectionName in allSectionNames)
+        {
+            var writtenKeys = new HashSet<string>(StringComparer.Ordinal);
+
+            writer.WritePropertyName(sectionName);
+            writer.WriteStartObject();
+
+            foreach (var comp in componentSources)
+            {
+                if (!comp.TryGetProperty(sectionName, out var section))
+                    continue;
+
+                foreach (var item in section.EnumerateObject())
+                {
+                    // Skip duplicates — first occurrence wins
+                    if (writtenKeys.Add(item.Name))
+                    {
+                        writer.WritePropertyName(item.Name);
+                        item.Value.WriteTo(writer);
+                    }
+                }
+            }
+
+            writer.WriteEndObject();
+        }
+
+        writer.WriteEndObject(); // end components
     }
 }

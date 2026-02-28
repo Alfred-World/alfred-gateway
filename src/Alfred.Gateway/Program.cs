@@ -165,7 +165,7 @@ app.MapGet("/", () => new
     environment = gatewayConfig.Environment,
     port = gatewayConfig.AppPort,
     timestamp = DateTime.UtcNow
-});
+}).ExcludeFromDescription();
 
 // YARP Reverse Proxy - Điều hướng requests tới các service backend
 app.MapReverseProxy();

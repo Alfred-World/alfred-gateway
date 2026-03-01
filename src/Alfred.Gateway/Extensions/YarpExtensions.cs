@@ -1,4 +1,3 @@
-using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.RateLimiting;
 using Alfred.Gateway.Configuration;
@@ -35,15 +34,9 @@ public static class YarpExtensions
                 // Configure server certificate validation
                 handler.SslOptions.RemoteCertificateValidationCallback = (sender, certificate, chain, errors) =>
                 {
-                    if (mtlsConfig.SkipServerCertValidation)
-                    {
-                        return true;
-                    }
+                    if (mtlsConfig.SkipServerCertValidation) return true;
 
-                    if (certificate == null)
-                    {
-                        return false;
-                    }
+                    if (certificate == null) return false;
 
                     // Build certificate chain with our CA
                     using var customChain = new X509Chain();
@@ -54,10 +47,7 @@ public static class YarpExtensions
                     var cert2 = new X509Certificate2(certificate);
                     var isValid = customChain.Build(cert2);
 
-                    if (!isValid)
-                    {
-                        return false;
-                    }
+                    if (!isValid) return false;
 
                     // Verify the certificate chain contains our CA
                     var chainContainsCa = customChain.ChainElements

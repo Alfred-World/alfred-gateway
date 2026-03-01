@@ -1,8 +1,6 @@
-using System.IdentityModel.Tokens.Jwt;
 using System.Text.Json;
 using Alfred.Gateway.Configuration;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Alfred.Gateway.Extensions;
@@ -64,13 +62,14 @@ public static class AuthExtensions
                     {
                         // Allow Swagger/Scalar/Docs to proceed (e.g. for anonymous access or token refresh)
                         // without forcing a JSON error response that breaks the UI
-                        if (context.Request.Path.Value?.Contains("/swagger", StringComparison.OrdinalIgnoreCase) == true ||
-                            context.Request.Path.Value?.Contains("/scalar", StringComparison.OrdinalIgnoreCase) == true ||
+                        if (context.Request.Path.Value?.Contains("/swagger", StringComparison.OrdinalIgnoreCase) ==
+                            true ||
+                            context.Request.Path.Value?.Contains("/scalar", StringComparison.OrdinalIgnoreCase) ==
+                            true ||
                             context.Request.Path.Value?.Contains("/docs", StringComparison.OrdinalIgnoreCase) == true ||
-                            context.Request.Path.Value?.Contains("/api-docs", StringComparison.OrdinalIgnoreCase) == true)
-                        {
+                            context.Request.Path.Value?.Contains("/api-docs", StringComparison.OrdinalIgnoreCase) ==
+                            true)
                             return Task.CompletedTask;
-                        }
 
                         context.HandleResponse();
                         context.Response.StatusCode = StatusCodes.Status401Unauthorized;
@@ -144,10 +143,7 @@ public static class AuthExtensions
     private static IEnumerable<SecurityKey> GetSigningKeys(string jwksUrl)
     {
         // Return cached keys if still valid
-        if (_cachedKeys != null && DateTime.UtcNow - _keysLastFetched < KeysCacheDuration)
-        {
-            return _cachedKeys;
-        }
+        if (_cachedKeys != null && DateTime.UtcNow - _keysLastFetched < KeysCacheDuration) return _cachedKeys;
 
         try
         {

@@ -82,7 +82,8 @@ public static class ScalarExtensions
         {
             c.Title = "Alfred API Gateway";
             c.Theme = ScalarTheme.Purple;
-            c.DefaultHttpClient = new(ScalarTarget.CSharp, ScalarClient.HttpClient);
+            c.DefaultHttpClient =
+                new KeyValuePair<ScalarTarget, ScalarClient>(ScalarTarget.CSharp, ScalarClient.HttpClient);
             c.OpenApiRoutePattern = "/api-docs/{documentName}.json";
             c.PersistentAuthentication = true;
         });

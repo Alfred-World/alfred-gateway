@@ -41,37 +41,26 @@ public class MtlsConfiguration
         CaCertPath = GetOptional("MTLS_CA_CERT_PATH");
         SkipServerCertValidation = GetBool("MTLS_SKIP_SERVER_CERT_VALIDATION", false);
 
-        if (Enabled)
-        {
-            ValidateConfiguration();
-        }
+        if (Enabled) ValidateConfiguration();
     }
 
     private void ValidateConfiguration()
     {
         if (string.IsNullOrWhiteSpace(ClientCertPath))
-        {
             throw new InvalidOperationException(
                 "MTLS_CLIENT_CERT_PATH is required when MTLS_ENABLED=true");
-        }
 
         if (!File.Exists(ClientCertPath))
-        {
             throw new InvalidOperationException(
                 $"Client certificate not found at: {ClientCertPath}");
-        }
 
         if (string.IsNullOrWhiteSpace(CaCertPath))
-        {
             throw new InvalidOperationException(
                 "MTLS_CA_CERT_PATH is required when MTLS_ENABLED=true");
-        }
 
         if (!File.Exists(CaCertPath))
-        {
             throw new InvalidOperationException(
                 $"CA certificate not found at: {CaCertPath}");
-        }
     }
 
     /// <summary>
@@ -80,9 +69,7 @@ public class MtlsConfiguration
     public X509Certificate2 LoadClientCertificate()
     {
         if (string.IsNullOrWhiteSpace(ClientCertPath))
-        {
             throw new InvalidOperationException("Client certificate path is not configured");
-        }
 
         return X509CertificateLoader.LoadPkcs12FromFile(
             ClientCertPath,
@@ -96,9 +83,7 @@ public class MtlsConfiguration
     public X509Certificate2 LoadCaCertificate()
     {
         if (string.IsNullOrWhiteSpace(CaCertPath))
-        {
             throw new InvalidOperationException("CA certificate path is not configured");
-        }
 
         return X509CertificateLoader.LoadCertificateFromFile(CaCertPath);
     }
@@ -111,10 +96,7 @@ public class MtlsConfiguration
     private static bool GetBool(string key, bool defaultValue)
     {
         var value = GetOptional(key);
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return defaultValue;
-        }
+        if (string.IsNullOrWhiteSpace(value)) return defaultValue;
 
         return value.Equals("true", StringComparison.OrdinalIgnoreCase) ||
                value.Equals("1", StringComparison.OrdinalIgnoreCase);

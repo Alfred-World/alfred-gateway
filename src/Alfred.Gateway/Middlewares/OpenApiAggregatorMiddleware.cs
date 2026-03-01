@@ -13,35 +13,34 @@ namespace Alfred.Gateway.Middlewares;
 /// </summary>
 public static class OpenApiAggregator
 {
-    private static readonly Dictionary<string, (string Name, string SpecPath)> ServiceMap = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["identity"] = ("Identity Service", "/api/identity/swagger/v1/swagger.json"),
-        ["core"] = ("Core Service", "/api/core/swagger/v1/swagger.json")
-    };
+    private static readonly Dictionary<string, (string Name, string SpecPath)> ServiceMap =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["identity"] = ("Identity Service", "/api/identity/swagger/v1/swagger.json"),
+            ["core"] = ("Core Service", "/api/core/swagger/v1/swagger.json")
+        };
 
     public static WebApplication MapAggregatedOpenApi(this WebApplication app)
     {
         app.MapGet("/api-docs/{documentName}.json", async (
-            string documentName,
-            HttpContext context,
-            IHttpClientFactory httpClientFactory,
-            GatewayConfiguration gatewayConfig,
-            ILogger<GatewayConfiguration> logger) =>
-        {
-            var baseUrl = $"http://localhost:{gatewayConfig.AppPort}";
-            var client = httpClientFactory.CreateClient("OpenApiAggregator");
-            client.BaseAddress = new Uri(baseUrl);
-
-            // --- Per-service spec: /api-docs/identity.json or /api-docs/core.json ---
-            if (ServiceMap.TryGetValue(documentName, out var serviceInfo))
+                string documentName,
+                HttpContext context,
+                IHttpClientFactory httpClientFactory,
+                GatewayConfiguration gatewayConfig,
+                ILogger<GatewayConfiguration> logger) =>
             {
-                return await ServeServiceSpec(client, serviceInfo.Name, serviceInfo.SpecPath, logger);
-            }
+                var baseUrl = $"http://localhost:{gatewayConfig.AppPort}";
+                var client = httpClientFactory.CreateClient("OpenApiAggregator");
+                client.BaseAddress = new Uri(baseUrl);
 
-            // --- Aggregated spec: /api-docs/v1.json ---
-            return await ServeAggregatedSpec(client, documentName, logger);
-        })
-        .ExcludeFromDescription();
+                // --- Per-service spec: /api-docs/identity.json or /api-docs/core.json ---
+                if (ServiceMap.TryGetValue(documentName, out var serviceInfo))
+                    return await ServeServiceSpec(client, serviceInfo.Name, serviceInfo.SpecPath, logger);
+
+                // --- Aggregated spec: /api-docs/v1.json ---
+                return await ServeAggregatedSpec(client, documentName, logger);
+            })
+            .ExcludeFromDescription();
 
         return app;
     }
@@ -109,10 +108,8 @@ public static class OpenApiAggregator
 
         var results = await Task.WhenAll(fetchTasks);
         foreach (var result in results)
-        {
             if (result.Success && result.Doc != null)
                 backendSpecs.Add((result.Name, result.Doc));
-        }
 
         try
         {
@@ -138,19 +135,13 @@ public static class OpenApiAggregator
                 writer.WriteStartObject();
 
                 if (root.TryGetProperty("paths", out var gatewayPaths))
-                {
                     foreach (var path in gatewayPaths.EnumerateObject())
                         path.WriteTo(writer);
-                }
 
                 foreach (var (_, svcDoc) in backendSpecs)
-                {
                     if (svcDoc.RootElement.TryGetProperty("paths", out var svcPaths))
-                    {
                         foreach (var path in svcPaths.EnumerateObject())
                             path.WriteTo(writer);
-                    }
-                }
 
                 writer.WriteEndObject(); // end paths
 
@@ -183,26 +174,16 @@ public static class OpenApiAggregator
 
         // Collect gateway tags
         if (gatewayRoot.TryGetProperty("tags", out var gwTags))
-        {
             foreach (var tag in gwTags.EnumerateArray())
-            {
                 if (tag.TryGetProperty("name", out var name) && tagNames.Add(name.GetString()!))
                     tags.Add(tag.Clone());
-            }
-        }
 
         // Collect backend tags
         foreach (var (_, svcDoc) in backendSpecs)
-        {
             if (svcDoc.RootElement.TryGetProperty("tags", out var svcTags))
-            {
                 foreach (var tag in svcTags.EnumerateArray())
-                {
                     if (tag.TryGetProperty("name", out var name) && tagNames.Add(name.GetString()!))
                         tags.Add(tag.Clone());
-                }
-            }
-        }
 
         if (tags.Count > 0)
         {
@@ -235,14 +216,12 @@ public static class OpenApiAggregator
         }
 
         foreach (var (_, svcDoc) in backendSpecs)
-        {
             if (svcDoc.RootElement.TryGetProperty("components", out var svcComp))
             {
                 componentSources.Add(svcComp);
                 foreach (var section in svcComp.EnumerateObject())
                     allSectionNames.Add(section.Name);
             }
-        }
 
         if (allSectionNames.Count == 0)
             return;
@@ -263,14 +242,12 @@ public static class OpenApiAggregator
                     continue;
 
                 foreach (var item in section.EnumerateObject())
-                {
                     // Skip duplicates — first occurrence wins
                     if (writtenKeys.Add(item.Name))
                     {
                         writer.WritePropertyName(item.Name);
                         item.Value.WriteTo(writer);
                     }
-                }
             }
 
             writer.WriteEndObject();

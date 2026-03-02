@@ -27,6 +27,12 @@ RUN dotnet publish "Alfred.Gateway.csproj" -c Release -o /app/publish /p:UseAppH
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 
+# Install runtime dependencies + tools for healthcheck
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgssapi-krb5-2 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
 # Tạo non-root user để bảo mật
 RUN groupadd --system --gid 1001 alfred && \
     useradd --system --uid 1001 --gid alfred --no-create-home alfred

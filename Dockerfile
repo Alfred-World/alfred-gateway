@@ -28,8 +28,8 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 
 # Tạo non-root user để bảo mật
-RUN addgroup --system --gid 1001 alfred && \
-    adduser --system --uid 1001 --ingroup alfred alfred
+RUN groupadd --system --gid 1001 alfred && \
+    useradd --system --uid 1001 --gid alfred --no-create-home alfred
 
 # Copy artifact từ publish stage
 COPY --from=publish /app/publish .

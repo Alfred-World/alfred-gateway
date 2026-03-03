@@ -50,10 +50,6 @@
           {
             "RequestHeader": "X-Forwarded-Proto",
             "Set": "https"
-          },
-          {
-            "RequestHeader": "X-Forwarded-Host",
-            "Set": "gateway.test"
           }
         ],
         "Order": 1
@@ -71,10 +67,6 @@
           {
             "RequestHeader": "X-Forwarded-Proto",
             "Set": "https"
-          },
-          {
-            "RequestHeader": "X-Forwarded-Host",
-            "Set": "gateway.test"
           }
         ],
         "Order": 1

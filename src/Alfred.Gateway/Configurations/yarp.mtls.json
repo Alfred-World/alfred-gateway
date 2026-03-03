@@ -67,37 +67,13 @@
         },
         "Order": 1
       },
-      "identity-applications-route": {
+      "identity-catchall-route": {
         "ClusterId": "identity-cluster",
         "AuthorizationPolicy": "Authenticated",
         "Match": {
-          "Path": "/applications/{**remainder}"
+          "Path": "/identity/{**remainder}"
         },
-        "Order": 1
-      },
-      "identity-roles-route": {
-        "ClusterId": "identity-cluster",
-        "AuthorizationPolicy": "Authenticated",
-        "Match": {
-          "Path": "/roles/{**remainder}"
-        },
-        "Order": 1
-      },
-      "identity-permissions-route": {
-        "ClusterId": "identity-cluster",
-        "AuthorizationPolicy": "Authenticated",
-        "Match": {
-          "Path": "/permissions/{**remainder}"
-        },
-        "Order": 1
-      },
-      "identity-user-route": {
-        "ClusterId": "identity-cluster",
-        "AuthorizationPolicy": "Authenticated",
-        "Match": {
-          "Path": "/users/{**remainder}"
-        },
-        "Order": 1
+        "Order": 10
       },
       "core-route": {
         "ClusterId": "core-cluster",

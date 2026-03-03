@@ -43,7 +43,7 @@ public class GatewayConfiguration
 
         // Authentication Settings
         AuthAuthority = GetOptional("AUTH_AUTHORITY") ?? "http://localhost:8100";
-        AuthValidIssuer = GetOptional("AUTH_VALID_ISSUER") ?? "Alfred.Identity";
+        AuthValidIssuer = GetRequired("AUTH_VALID_ISSUER");
         AuthRequireHttpsMetadata = GetBool("AUTH_REQUIRE_HTTPS_METADATA", false);
 
         // CORS Settings

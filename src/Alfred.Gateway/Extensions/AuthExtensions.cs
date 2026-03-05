@@ -2,6 +2,7 @@ using System.Text.Json;
 using Alfred.Gateway.Configuration;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using StackExchange.Redis;
 
 namespace Alfred.Gateway.Extensions;
 
@@ -52,6 +53,42 @@ public static class AuthExtensions
                 // Event handlers for debugging and custom logic
                 options.Events = new JwtBearerEvents
                 {
+                    OnTokenValidated = async context =>
+                    {
+                        // ── Session / JTI blocklist check ──────────────────────────────────────
+                        // The AT carries an "authorization_id" claim set by the Identity service.
+                        // When a session is revoked, Identity writes "revoked:session:{id}" to Redis
+                        // with a TTL equal to the AT lifetime. We reject any token whose session
+                        // has been blocklisted — providing immediate revocation without waiting for
+                        // the AT to expire naturally.
+                        var redis = context.HttpContext.RequestServices
+                            .GetService<IConnectionMultiplexer>();
+
+                        if (redis != null)
+                        {
+                            var authorizationId = context.Principal?
+                                .FindFirst("authorization_id")?.Value;
+
+                            if (!string.IsNullOrEmpty(authorizationId))
+                            {
+                                try
+                                {
+                                    var db = redis.GetDatabase();
+                                    var isRevoked = await db.KeyExistsAsync($"revoked:session:{authorizationId}");
+
+                                    if (isRevoked)
+                                    {
+                                        context.Fail("Session has been revoked");
+                                        return;
+                                    }
+                                }
+                                catch
+                                {
+                                    // Redis unavailable — fail open (don't block legitimate users)
+                                }
+                            }
+                        }
+                    },
                     OnAuthenticationFailed = context =>
                     {
                         if (context.Exception.GetType() == typeof(SecurityTokenExpiredException))

@@ -156,17 +156,6 @@ app.UseRateLimiter();
 // Health Check endpoint
 app.MapHealthChecks("/health");
 
-// Gateway Info endpoint (cho biết gateway đang chạy)
-app.MapGet("/", () => new
-{
-    service = "Alfred API Gateway",
-    version = "1.0.0",
-    status = "running",
-    environment = gatewayConfig.Environment,
-    port = gatewayConfig.AppPort,
-    timestamp = DateTime.UtcNow
-}).ExcludeFromDescription();
-
 // YARP Reverse Proxy - Điều hướng requests tới các service backend
 app.MapReverseProxy();
 

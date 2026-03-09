@@ -27,7 +27,10 @@ public class GatewayConfiguration
 
     // Service Endpoints
     public string IdentityServiceUrl { get; }
+    public string IdentityServiceMtlsUrl { get; }
     public string CoreServiceUrl { get; }
+    public string CoreServiceMtlsUrl { get; }
+    public string NotificationServiceUrl { get; }
 
     // Health Check Settings
     public int HealthCheckIntervalSeconds { get; }
@@ -59,7 +62,10 @@ public class GatewayConfiguration
 
         // Service Endpoints
         IdentityServiceUrl = GetOptional("IDENTITY_SERVICE_URL") ?? "http://localhost:8100";
+        IdentityServiceMtlsUrl = GetOptional("IDENTITY_SERVICE_MTLS_URL") ?? "https://localhost:8101";
         CoreServiceUrl = GetOptional("CORE_SERVICE_URL") ?? "http://localhost:8200";
+        CoreServiceMtlsUrl = GetOptional("CORE_SERVICE_MTLS_URL") ?? "https://localhost:8201";
+        NotificationServiceUrl = GetOptional("NOTIFICATION_SERVICE_URL") ?? "http://localhost:8300";
 
         // Health Check Settings
         HealthCheckIntervalSeconds = GetInt("HEALTH_CHECK_INTERVAL_SECONDS", 30);
@@ -82,6 +88,9 @@ public class GatewayConfiguration
 
         if (string.IsNullOrWhiteSpace(CoreServiceUrl))
             throw new InvalidOperationException("CORE_SERVICE_URL cannot be empty");
+
+        if (string.IsNullOrWhiteSpace(NotificationServiceUrl))
+            throw new InvalidOperationException("NOTIFICATION_SERVICE_URL cannot be empty");
 
         if (CorsAllowedOrigins.Length == 0)
             throw new InvalidOperationException("CORS_ALLOWED_ORIGINS must contain at least one origin");

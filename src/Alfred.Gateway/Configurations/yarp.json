@@ -1,133 +1,128 @@
 {
   "ReverseProxy": {
     "Routes": {
+
+      // ─────────────────────────── IDENTITY ──────────────────────────────────
       "identity-swagger-route": {
         "ClusterId": "identity-cluster",
         "AuthorizationPolicy": "AllowAnonymous",
-        "Match": {
-          "Path": "/api/identity/swagger/{**remainder}"
-        },
-        "Transforms": [
-          {
-            "PathPattern": "/swagger/{**remainder}"
-          }
-        ]
-      },
-      "core-swagger-route": {
-        "ClusterId": "core-cluster",
-        "AuthorizationPolicy": "AllowAnonymous",
-        "Match": {
-          "Path": "/api/core/swagger/{**remainder}"
-        },
-        "Transforms": [
-          {
-            "PathPattern": "/swagger/{**remainder}"
-          }
-        ]
-      },
-      "notification-swagger-route": {
-        "ClusterId": "notification-cluster",
-        "AuthorizationPolicy": "AllowAnonymous",
-        "Match": {
-          "Path": "/api/notification/swagger/{**remainder}"
-        },
-        "Transforms": [
-          {
-            "PathPattern": "/swagger/{**remainder}"
-          }
-        ]
+        "Match": { "Path": "/api/identity/swagger/{**remainder}" },
+        "Transforms": [ { "PathPattern": "/swagger/{**remainder}" } ]
       },
       "identity-auth-route": {
         "ClusterId": "identity-cluster",
         "AuthorizationPolicy": "AllowAnonymous",
-        "Match": {
-          "Path": "/identity/auth/{**remainder}"
-        },
+        "Match": { "Path": "/identity/auth/{**remainder}" },
         "Transforms": [
-          {
-            "X-Forwarded": "Set"
-          },
-          {
-            "RequestHeader": "X-Forwarded-Proto",
-            "Set": "https"
-          }
+          { "X-Forwarded": "Set" },
+          { "RequestHeader": "X-Forwarded-Proto", "Set": "https" }
         ],
         "Order": 1
       },
       "identity-connect-route": {
         "ClusterId": "identity-cluster",
         "AuthorizationPolicy": "AllowAnonymous",
-        "Match": {
-          "Path": "/connect/{**remainder}"
-        },
+        "Match": { "Path": "/connect/{**remainder}" },
         "Transforms": [
-          {
-            "X-Forwarded": "Set"
-          },
-          {
-            "RequestHeader": "X-Forwarded-Proto",
-            "Set": "https"
-          }
+          { "X-Forwarded": "Set" },
+          { "RequestHeader": "X-Forwarded-Proto", "Set": "https" }
         ],
         "Order": 1
       },
       "identity-wellknown-route": {
         "ClusterId": "identity-cluster",
         "AuthorizationPolicy": "AllowAnonymous",
-        "Match": {
-          "Path": "/.well-known/{**remainder}"
-        },
+        "Match": { "Path": "/.well-known/{**remainder}" },
+        "Order": 1
+      },
+      "identity-applications-route": {
+        "ClusterId": "identity-cluster",
+        "AuthorizationPolicy": "Authenticated",
+        "Match": { "Path": "/applications/{**remainder}" },
+        "Order": 1
+      },
+      "identity-roles-route": {
+        "ClusterId": "identity-cluster",
+        "AuthorizationPolicy": "Authenticated",
+        "Match": { "Path": "/roles/{**remainder}" },
+        "Order": 1
+      },
+      "identity-permissions-route": {
+        "ClusterId": "identity-cluster",
+        "AuthorizationPolicy": "Authenticated",
+        "Match": { "Path": "/permissions/{**remainder}" },
+        "Order": 1
+      },
+      "identity-users-route": {
+        "ClusterId": "identity-cluster",
+        "AuthorizationPolicy": "Authenticated",
+        "Match": { "Path": "/users/{**remainder}" },
         "Order": 1
       },
       "identity-catchall-route": {
         "ClusterId": "identity-cluster",
         "AuthorizationPolicy": "Authenticated",
-        "Match": {
-          "Path": "/identity/{**remainder}"
-        },
+        "Match": { "Path": "/identity/{**remainder}" },
         "Order": 10
+      },
+
+      // ─────────────────────────── CORE ──────────────────────────────────────
+      "core-swagger-route": {
+        "ClusterId": "core-cluster",
+        "AuthorizationPolicy": "AllowAnonymous",
+        "Match": { "Path": "/api/core/swagger/{**remainder}" },
+        "Transforms": [ { "PathPattern": "/swagger/{**remainder}" } ]
       },
       "core-route": {
         "ClusterId": "core-cluster",
         "AuthorizationPolicy": "Authenticated",
         "RateLimiterPolicy": "fixed-window",
-        "Match": {
-          "Path": "/api/{**remainder}"
-        },
+        "Match": { "Path": "/api/{**remainder}" },
         "Order": 100
       },
+
+      // ─────────────────────────── NOTIFICATION ──────────────────────────────
+      "notification-swagger-route": {
+        "ClusterId": "notification-cluster",
+        "AuthorizationPolicy": "AllowAnonymous",
+        "Match": { "Path": "/api/notification/swagger/{**remainder}" },
+        "Transforms": [ { "PathPattern": "/{**remainder}" } ]
+      },
+      "notification-templates-route": {
+        "ClusterId": "notification-cluster",
+        "AuthorizationPolicy": "Authenticated",
+        "Match": { "Path": "/templates/{**remainder}" },
+        "Order": 1
+      },
+
+      // ─────────────────────────── HEALTH ────────────────────────────────────
       "health-check-identity-route": {
         "ClusterId": "identity-cluster",
         "AuthorizationPolicy": "AllowAnonymous",
-        "Match": {
-          "Path": "/health/identity"
-        },
-        "Transforms": [
-          {
-            "PathPattern": "/health"
-          }
-        ]
+        "Match": { "Path": "/health/identity" },
+        "Transforms": [ { "PathPattern": "/health" } ]
       },
       "health-check-core-route": {
         "ClusterId": "core-cluster",
         "AuthorizationPolicy": "AllowAnonymous",
-        "Match": {
-          "Path": "/health/core"
-        },
-        "Transforms": [
-          {
-            "PathPattern": "/health"
-          }
-        ]
+        "Match": { "Path": "/health/core" },
+        "Transforms": [ { "PathPattern": "/health" } ]
+      },
+      "health-check-notification-route": {
+        "ClusterId": "notification-cluster",
+        "AuthorizationPolicy": "AllowAnonymous",
+        "Match": { "Path": "/health/notification" },
+        "Transforms": [ { "PathPattern": "/health" } ]
       }
     },
+
     "Clusters": {
+      // Addresses are injected at startup from env vars:
+      //   IDENTITY_SERVICE_URL / IDENTITY_SERVICE_MTLS_URL
+      //   CORE_SERVICE_URL     / CORE_SERVICE_MTLS_URL
+      //   NOTIFICATION_SERVICE_URL
       "identity-cluster": {
-        "Destinations": {
-          "destination1": {
-            "Address": "http://alfred-identity:8100"
-          }
-        },
+        "Destinations": { "destination1": {} },
         "HealthCheck": {
           "Active": {
             "Enabled": true,
@@ -139,11 +134,7 @@
         }
       },
       "core-cluster": {
-        "Destinations": {
-          "destination1": {
-            "Address": "http://alfred-core:8200"
-          }
-        },
+        "Destinations": { "destination1": {} },
         "HealthCheck": {
           "Active": {
             "Enabled": true,
@@ -155,11 +146,7 @@
         }
       },
       "notification-cluster": {
-        "Destinations": {
-          "destination1": {
-            "Address": "http://alfred-notification:8300"
-          }
-        },
+        "Destinations": { "destination1": {} },
         "HealthCheck": {
           "Active": {
             "Enabled": true,

@@ -9,7 +9,7 @@ public static class RedisExtensions
         var host = Environment.GetEnvironmentVariable("REDIS_HOST");
         if (string.IsNullOrEmpty(host))
         {
-            Console.WriteLine("ℹ️  REDIS_HOST not set — dynamic authorization disabled.");
+            Console.WriteLine("ℹ️  REDIS_HOST not set — Redis-backed session revocation checks disabled.");
             return services;
         }
 
@@ -35,7 +35,7 @@ public static class RedisExtensions
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"⚠️  Redis connection failed: {ex.Message}. Dynamic authorization disabled.");
+            Console.WriteLine($"⚠️  Redis connection failed: {ex.Message}. Session revocation checks disabled.");
         }
 
         return services;

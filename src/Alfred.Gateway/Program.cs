@@ -50,7 +50,6 @@ if (!app.Environment.IsDevelopment()) app.UseHttpsRedirection();
 app.UseAlfredCors();
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseDynamicAuthorization();
 app.UseRateLimiter();
 
 // ── 4. Endpoints ───────────────────────────────────────────────────────────────

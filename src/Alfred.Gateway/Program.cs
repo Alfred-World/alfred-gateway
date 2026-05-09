@@ -11,11 +11,16 @@ var gatewayConfig = new GatewayConfiguration();
 var mtlsConfig = new MtlsConfiguration();
 
 var builder = WebApplication.CreateBuilder(args);
-builder.WebHost.ConfigureKestrel((_, opts) => opts.ListenAnyIP(gatewayConfig.AppPort));
+builder.WebHost.ConfigureKestrel((_, opts) =>
+{
+    opts.ListenAnyIP(gatewayConfig.AppPort);
+    opts.Limits.MaxRequestBodySize = 200 * 1024 * 1024;
+});
 
 // Single YARP config file — all routes, all services.
 // Cluster addresses are injected at runtime (see AddAlfredYarp).
 builder.Configuration.AddJsonFile("Configurations/yarp.json", optional: false, reloadOnChange: true);
+builder.Configuration.AddJsonFile("Configurations/yarp.dynamic.json", optional: true, reloadOnChange: true);
 
 // ── 2. Services ────────────────────────────────────────────────────────────────
 builder.Services
@@ -50,14 +55,14 @@ if (!app.Environment.IsDevelopment()) app.UseHttpsRedirection();
 app.UseAlfredCors();
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseRateLimiter();
+if (gatewayConfig.RateLimitEnabled) app.UseRateLimiter();
 
 // ── 4. Endpoints ───────────────────────────────────────────────────────────────
 app.MapHealthChecks("/health");
 app.MapReverseProxy();
 
 // ── 5. Run ─────────────────────────────────────────────────────────────────────
-app.Logger.LogInformation("🚀 Alfred Gateway | env={Env} | port={Port} | mTLS={Mtls}",
-    gatewayConfig.Environment, gatewayConfig.AppPort, mtlsConfig.Enabled);
+app.Logger.LogInformation("Alfred Gateway | env={Env} | port={Port} | mTLS={Mtls} | rateLimit={RateLimit}",
+    gatewayConfig.Environment, gatewayConfig.AppPort, mtlsConfig.Enabled, gatewayConfig.RateLimitEnabled);
 
 app.Run();

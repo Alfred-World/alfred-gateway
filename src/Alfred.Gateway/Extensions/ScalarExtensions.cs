@@ -1,92 +1,44 @@
-using Alfred.Gateway.Middlewares;
-using Microsoft.OpenApi.Models;
+using Alfred.Gateway.Endpoints;
 using Scalar.AspNetCore;
 
 namespace Alfred.Gateway.Extensions;
 
 /// <summary>
-/// Extension methods for configuring Scalar API documentation with API aggregation
+/// Extension methods for configuring the gateway documentation portal and per-service Scalar pages.
 /// </summary>
 public static class ScalarExtensions
 {
     /// <summary>
-    /// Adds OpenAPI spec generation with aggregated API documentation from backend services
+    /// Registers documentation services used by the gateway docs portal.
     /// </summary>
     public static IServiceCollection AddAlfredScalar(this IServiceCollection services)
     {
         services.AddEndpointsApiExplorer();
-        services.AddHttpClient("OpenApiAggregator")
-            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
-            {
-                ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
-            });
-
-        services.AddSwaggerGen(options =>
-        {
-            options.SwaggerDoc("v1", new OpenApiInfo
-            {
-                Title = "Alfred API Gateway",
-                Version = "v1",
-                Description = "Centralized API Gateway for A.L.F.R.E.D system - aggregates all microservices APIs",
-                Contact = new OpenApiContact
-                {
-                    Name = "Alfred Development Team",
-                    Email = "dev@alfred.com"
-                }
-            });
-
-            // Add JWT Bearer authentication
-            options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-            {
-                Description =
-                    "JWT Authorization header using the Bearer scheme. Enter 'Bearer' [space] and then your token",
-                Name = "Authorization",
-                In = ParameterLocation.Header,
-                Type = SecuritySchemeType.Http,
-                Scheme = "bearer",
-                BearerFormat = "JWT"
-            });
-
-            options.AddSecurityRequirement(new OpenApiSecurityRequirement
-            {
-                {
-                    new OpenApiSecurityScheme
-                    {
-                        Reference = new OpenApiReference
-                        {
-                            Type = ReferenceType.SecurityScheme,
-                            Id = "Bearer"
-                        }
-                    },
-                    new List<string>()
-                }
-            });
-        });
 
         return services;
     }
 
     /// <summary>
-    /// Uses Scalar API reference with aggregated backend services
+    /// Uses a gateway docs landing page plus dedicated Scalar pages for each downstream service.
     /// </summary>
     public static WebApplication UseAlfredScalar(this WebApplication app)
     {
-        // Serve gateway's own OpenAPI spec (used internally by aggregator)
-        app.UseSwagger();
+        var dynamicProxies = app.Services.GetRequiredService<IReadOnlyList<DynamicProxyDefinition>>();
 
-        // Custom endpoint that merges gateway + backend service specs
-        app.MapAggregatedOpenApi();
+        app.MapDocumentationPortal();
 
-        // Single Scalar page showing all APIs
-        app.MapScalarApiReference("/docs", c =>
+        foreach (var service in DocumentationPortalEndpoints.BuildServiceDocs(dynamicProxies))
         {
-            c.Title = "Alfred API Gateway";
-            c.Theme = ScalarTheme.Purple;
-            c.DefaultHttpClient =
-                new KeyValuePair<ScalarTarget, ScalarClient>(ScalarTarget.CSharp, ScalarClient.HttpClient);
-            c.OpenApiRoutePattern = "/api-docs/{documentName}.json";
-            c.PersistentAuthentication = true;
-        });
+            app.MapScalarApiReference(service.DocsPath, c =>
+            {
+                c.Title = $"{service.DisplayName} API";
+                c.Theme = ScalarTheme.Purple;
+                c.DefaultHttpClient =
+                    new KeyValuePair<ScalarTarget, ScalarClient>(ScalarTarget.CSharp, ScalarClient.HttpClient);
+                c.OpenApiRoutePattern = service.OpenApiRoutePattern;
+                c.PersistentAuthentication = true;
+            });
+        }
 
         return app;
     }

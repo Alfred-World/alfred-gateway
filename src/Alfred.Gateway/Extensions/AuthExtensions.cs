@@ -103,9 +103,7 @@ public static class AuthExtensions
                             true ||
                             context.Request.Path.Value?.Contains("/scalar", StringComparison.OrdinalIgnoreCase) ==
                             true ||
-                            context.Request.Path.Value?.Contains("/docs", StringComparison.OrdinalIgnoreCase) == true ||
-                            context.Request.Path.Value?.Contains("/api-docs", StringComparison.OrdinalIgnoreCase) ==
-                            true)
+                            context.Request.Path.Value?.Contains("/docs", StringComparison.OrdinalIgnoreCase) == true)
                             return Task.CompletedTask;
 
                         context.HandleResponse();

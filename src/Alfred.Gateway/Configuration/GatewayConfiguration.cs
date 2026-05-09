@@ -1,8 +1,8 @@
 namespace Alfred.Gateway.Configuration;
 
 /// <summary>
-/// Centralized configuration for Gateway settings loaded from environment variables
-/// Follows the same pattern as Alfred.Identity.WebApi.Configuration.AppConfiguration
+/// Centralized configuration for gateway settings loaded from environment variables.
+/// Service routing is env-driven via DYNAMIC_PROXY__* entries.
 /// </summary>
 public class GatewayConfiguration
 {
@@ -13,6 +13,8 @@ public class GatewayConfiguration
     public bool IsDevelopment => Environment.Equals("Development", StringComparison.OrdinalIgnoreCase);
 
     // Authentication Settings
+    // AUTH_AUTHORITY: base URL used for JWKS discovery (/.well-known/jwks.json).
+    // Falls back to IDENTITY_SERVICE_URL for backward compatibility.
     public string AuthAuthority { get; }
     public string AuthValidIssuer { get; }
     public bool AuthRequireHttpsMetadata { get; }
@@ -21,16 +23,10 @@ public class GatewayConfiguration
     public string[] CorsAllowedOrigins { get; }
 
     // Rate Limiting Settings
+    public bool RateLimitEnabled { get; }
     public int RateLimitWindowMinutes { get; }
     public int RateLimitPermitLimit { get; }
     public int RateLimitQueueLimit { get; }
-
-    // Service Endpoints
-    public string IdentityServiceUrl { get; }
-    public string IdentityServiceMtlsUrl { get; }
-    public string CoreServiceUrl { get; }
-    public string CoreServiceMtlsUrl { get; }
-    public string NotificationServiceUrl { get; }
 
     // Health Check Settings
     public int HealthCheckIntervalSeconds { get; }
@@ -38,40 +34,30 @@ public class GatewayConfiguration
 
     public GatewayConfiguration()
     {
-        // Application Settings
         Environment = GetOptional("ASPNETCORE_ENVIRONMENT") ?? "Development";
         AppHostname = GetOptional("APP_HOSTNAME") ?? "localhost";
         AppPort = GetInt("APP_PORT", 8000);
         ValidatePort(AppPort);
 
-        // Authentication Settings
-        AuthAuthority = GetOptional("AUTH_AUTHORITY") ?? "http://localhost:8100";
+        AuthAuthority = GetOptional("AUTH_AUTHORITY")
+                        ?? GetOptional("IDENTITY_SERVICE_URL")
+                        ?? "http://localhost:8100";
         AuthValidIssuer = GetRequired("AUTH_VALID_ISSUER");
         AuthRequireHttpsMetadata = GetBool("AUTH_REQUIRE_HTTPS_METADATA", false);
 
-        // CORS Settings
         var corsOrigins = GetOptional("CORS_ALLOWED_ORIGINS") ?? "http://localhost:7000";
         CorsAllowedOrigins = corsOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries)
             .Select(o => o.Trim())
             .ToArray();
 
-        // Rate Limiting Settings
+        RateLimitEnabled = GetBool("RATE_LIMIT_ENABLED", !IsDevelopment);
         RateLimitWindowMinutes = GetInt("RATE_LIMIT_WINDOW_MINUTES", 1);
         RateLimitPermitLimit = GetInt("RATE_LIMIT_PERMIT_LIMIT", 100);
         RateLimitQueueLimit = GetInt("RATE_LIMIT_QUEUE_LIMIT", 2);
 
-        // Service Endpoints
-        IdentityServiceUrl = GetOptional("IDENTITY_SERVICE_URL") ?? "http://localhost:8100";
-        IdentityServiceMtlsUrl = GetOptional("IDENTITY_SERVICE_MTLS_URL") ?? "https://localhost:8101";
-        CoreServiceUrl = GetOptional("CORE_SERVICE_URL") ?? "http://localhost:8200";
-        CoreServiceMtlsUrl = GetOptional("CORE_SERVICE_MTLS_URL") ?? "https://localhost:8201";
-        NotificationServiceUrl = GetOptional("NOTIFICATION_SERVICE_URL") ?? "http://localhost:8300";
-
-        // Health Check Settings
         HealthCheckIntervalSeconds = GetInt("HEALTH_CHECK_INTERVAL_SECONDS", 30);
         HealthCheckTimeoutSeconds = GetInt("HEALTH_CHECK_TIMEOUT_SECONDS", 10);
 
-        // Validate Configuration
         ValidateConfiguration();
     }
 
@@ -82,15 +68,6 @@ public class GatewayConfiguration
 
         if (string.IsNullOrWhiteSpace(AuthAuthority))
             throw new InvalidOperationException("AUTH_AUTHORITY cannot be empty");
-
-        if (string.IsNullOrWhiteSpace(IdentityServiceUrl))
-            throw new InvalidOperationException("IDENTITY_SERVICE_URL cannot be empty");
-
-        if (string.IsNullOrWhiteSpace(CoreServiceUrl))
-            throw new InvalidOperationException("CORE_SERVICE_URL cannot be empty");
-
-        if (string.IsNullOrWhiteSpace(NotificationServiceUrl))
-            throw new InvalidOperationException("NOTIFICATION_SERVICE_URL cannot be empty");
 
         if (CorsAllowedOrigins.Length == 0)
             throw new InvalidOperationException("CORS_ALLOWED_ORIGINS must contain at least one origin");
